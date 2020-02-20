@@ -8,7 +8,7 @@ from utils import *
 thisDir = os.getcwd()
 outputDir = thisDir+'/'
 
-region='SR' #PS,SR,TTCR,WJCR
+region='SR'#'SR' #PS,SR,TTCR,WJCR
 categorize=1 #1==categorize into t/W/b/j, 0==only split into flavor
 
 cTime=datetime.datetime.now()
@@ -18,7 +18,7 @@ if region=='TTCR': pfix='ttbar'
 elif region=='WJCR': pfix='wjets'
 else: pfix='templates'
 if not categorize: pfix='kinematics_'+region
-pfix+='_onlyHOTcats2pb6pj_DeepCSV_2020_1_29'#+date#+'_'+time
+pfix+='_BDT_PS_2020_2_20'#+date#+'_'+time
 
 iPlotList = [#distribution name as defined in "doHists.py"
 'HT',
@@ -93,7 +93,7 @@ iPlotList = [#distribution name as defined in "doHists.py"
 
 # 'NHOTtJets',
 # 'NPV',
-# 'BDT',
+'BDT',
 # 'minMlbSBins',
 # 'NJets_vs_NBJets',
 # 'isHTgt500Njetge9',
@@ -139,7 +139,7 @@ catList = list(itertools.product(isEMlist,nhottlist,nttaglist,nWtaglist,nbtaglis
 	
 outDir = outputDir+pfix
 if not os.path.exists(outDir): os.system('mkdir '+outDir)
-os.system('cp ../analyze.py doHists.py ../weights.py ../samples.py ../utils.py doHists.py doCondorTemplates.py doCondorTemplates.sh '+outDir+'/')
+os.system('cp ../analyze.py doHists.py ../weights.py ../samples.py ../utils.py doCondorTemplates.py doCondorTemplates.sh '+outDir+'/')
 os.chdir(outDir)
 
 count=0

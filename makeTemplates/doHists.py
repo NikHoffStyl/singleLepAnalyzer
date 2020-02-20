@@ -15,7 +15,7 @@ gROOT.SetBatch(1)
 start_time = time.time()
 
 lumiStr = str(targetlumi/1000).replace('.','p') # 1/fb
-step1Dir = '/mnt/hadoop/store/group/bruxljm/FWLJMET102X_1lep2017_Oct2019_4t_121919_step1hadds/nominal'
+step1Dir = '/mnt/hadoop/store/group/bruxljm/FWLJMET102X_1lep2017_Oct2019_4t_02192020_step3_61var/nominal'
 
 """
 Note: 
@@ -76,9 +76,9 @@ if whichSignal=='TT': decays = ['BWBW','THTH','TZTZ','TZBW','THBW','TZTH'] #T' d
 elif whichSignal=='BB': decays = ['TWTW','BHBH','BZBZ','BZTW','BHTW','BZBH'] #B' decays
 else: decays = [''] #there is only one possible decay mode!
 
-iPlot = 'HT' #choose a discriminant from plotList below!
-region = 'PS'
-isCategorized = 0
+iPlot = 'BDT' #choose a discriminant from plotList below!
+region = 'SR'
+isCategorized = 1
 doJetRwt= 0
 doAllSys= True
 doHDsys = True

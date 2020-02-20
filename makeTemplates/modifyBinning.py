@@ -29,14 +29,14 @@ start_time = time.time()
 # -- Use "removalKeys" to remove specific systematics from the output file.
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-iPlot='HT'
+iPlot='BDT'
 if len(sys.argv)>1: iPlot=str(sys.argv[1])
 cutString = ''#'lep30_MET150_NJets4_DR1_1jet450_2jet150'
-templateDir = os.getcwd()+'/templates_onlyHOTcats2pb6pj_DeepCSV_PSsig_2020_1_29/'+cutString
+templateDir = os.getcwd()+'/kinematics_PS_BDT_PS_2020_2_19/'+cutString
 combinefile = 'templates_'+iPlot+'_41p53fb.root'
 
 quiet = True #if you don't want to see the warnings that are mostly from the stat. shape algorithm!
-rebinCombine = True #else rebins theta templates
+rebinCombine = False#else rebins theta templates
 doStatShapes = False
 doPDF = False
 doMURF = True

@@ -72,7 +72,7 @@ def analyze(tTree,process,flv,cutList,doAllSys,doJetRwt,iPlot,plotDetails,catego
 
 	weightStr = '1'
 	#Update here as needed!!!!!!
-	if ('BDT' in plotTreeName) and (process.startswith('4TM') or process.startswith('TTJets')):
+	if ('BDT' in plotTreeName) and (process.startswith('TTTT') or process.startswith('TTJets')):
 		cut += ' && (isTraining == 3)'
 		weightStr = '3'
 		
@@ -315,9 +315,9 @@ def analyze(tTree,process,flv,cutList,doAllSys,doJetRwt,iPlot,plotDetails,catego
 			print 'Processing JER ...'
 			tTree[process+'jerUp'].Draw(plotTreeName   +' >> '+iPlot+'jerUp_'  +lumiStr+'fb_'+catStr+'_' +process+flv, weightStr+'*('+fullcut+')', 'GOFF')
 			tTree[process+'jerDown'].Draw(plotTreeName +' >> '+iPlot+'jerDown_'+lumiStr+'fb_'+catStr+'_' +process+flv, weightStr+'*('+fullcut+')', 'GOFF')
-		for i in range(100): 
-			print 'Processing PDF',i+1,'/ 100 ...'
-			tTree[process].Draw(plotTreeName+' >> '+iPlot+'pdf'+str(i)+'_'+lumiStr+'fb_'+catStr+'_'+process+flv, 'pdfWeights['+str(i)+'] * '+weightStr+'*('+fullcut+')', 'GOFF')
+		# for i in range(100): 
+		# 	print 'Processing PDF',i+1,'/ 100 ...'
+		# 	tTree[process].Draw(plotTreeName+' >> '+iPlot+'pdf'+str(i)+'_'+lumiStr+'fb_'+catStr+'_'+process+flv, 'pdfWeights['+str(i)+'] * '+weightStr+'*('+fullcut+')', 'GOFF')
 	
 	for key in hists.keys(): hists[key].SetDirectory(0)	
 	return hists

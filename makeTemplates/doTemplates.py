@@ -14,14 +14,14 @@ start_time = time.time()
 
 lumiStr = str(targetlumi/1000).replace('.','p')+'fb' # 1/fb
 saveKey = ''#'_noTTHFsplit'
-region='SR' #PS,SR,TTCR,WJCR
-isCategorized=1
+region='PS' #PS,SR,TTCR,WJCR
+isCategorized=0
 cutString=''#'lep30_MET100_NJets4_DR1_1jet250_2jet50'
 if region=='SR': pfix='templates_'
 if region=='TTCR': pfix='ttbar_'
 if region=='WJCR': pfix='wjets_'
 if not isCategorized: pfix='kinematics_'+region+'_'
-pfix+='onlyHOTcats2pb6pj_DeepCSV_2020_1_29'
+pfix+='BDT_PS_2020_2_19'
 outDir = os.getcwd()+'/'+pfix+'/'+cutString
 
 writeSummaryHists = True
@@ -672,7 +672,7 @@ for iPlot in iPlotList:
 	if len(sys.argv)>1 and iPlot!=sys.argv[1]: continue
 	print "LOADING DISTRIBUTION: "+iPlot
 	#if iPlot=="Tau32Nm1" or iPlot=="SoftDropMassNm1t" or iPlot=="SoftDropMass" or iPlot=="Tau21Nm1" or iPlot=="SoftDropMassNm1W": continue
-	if iPlot!="HT": continue
+	if iPlot!="HT" and iPlot!="BDT": continue
 	for cat in catList:
 		print "         ",cat[2:]
 		datahists.update(pickle.load(open(outDir+'/'+cat[2:]+'/datahists_'+iPlot+'.p','rb')))

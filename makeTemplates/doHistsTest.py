@@ -14,7 +14,7 @@ gROOT.SetBatch(1)
 start_time = time.time()
 
 lumiStr = str(targetlumi/1000).replace('.','p') # 1/fb
-step1Dir = '/mnt/hadoop/store/group/bruxljm/FWLJMET102X_1lep2017_4t_081019_step1hadds/nominal'
+step1Dir = ' /mnt/hadoop/store/group/bruxljm/FWLJMET102X_1lep2017_Oct2019_4t_02192020_step3_61var/nominal'
 
 """
 Note: 

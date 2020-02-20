@@ -15,18 +15,18 @@ start_time = time.time()
 lumi=41.5 #for plots
 lumiInTemplates= str(targetlumi/1000).replace('.','p') # 1/fb
 
-region='SR' #PS,SR,TTCR,WJCR
+region='PS' #PS,SR,TTCR,WJCR
 isCategorized=0
-iPlot='HT'
+iPlot='BDT'
 if len(sys.argv)>1: iPlot=str(sys.argv[1])
 cutString=''
 if region=='SR': pfix='templates_'
 elif region=='WJCR': pfix='wjets_'
 elif region=='TTCR': pfix='ttbar_'
 if not isCategorized: pfix='kinematics_'+region+'_'
-templateDir=os.getcwd()+'/'+pfix+'DeepCSV_PSsig_2020_1_22/'+cutString+'/'
+templateDir=os.getcwd()+'/'+pfix+'BDT_PS_2020_2_19/'+cutString+'/'
 
-isRebinned='_rebinned_stat1p1' #post for ROOT file names
+isRebinned='_rebinned_stat0p3' #post for ROOT file names
 saveKey = '_4txsec' # tag for plot names
 
 sig='TTTTM690' #  choose the 1st signal to plot
