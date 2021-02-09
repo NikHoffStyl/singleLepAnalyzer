@@ -206,7 +206,7 @@ class Plotter(object):
                 pullErrorList = []
                 pullXAxisList = []
                 with open(self.ratioFileName, 'w') as ratioFile:
-                    print "\n      WRITTING TO MCeff " + scalefactorFileName + " \n"
+                    print "\n      WRITTING TO MCeff " + self.ratioFileName + " \n"
                     ratioFile.write("\n MCstack \n")
                     pullXAxisLowEdgeLists = []
                     for bini in range(1, pull.GetNbinsX() + 1):

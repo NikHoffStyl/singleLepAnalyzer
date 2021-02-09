@@ -2,16 +2,13 @@
 
 year = 'R17'
 
-import os, sys, time, math, pickle, itertools
-from array import array
-import lib_Plotters  as libPlot
-from lib_PadFormat import *
+import os, sys, time, math, itertools
+import pkgCustomPlotTools.lib_Plotters  as libPlot
 parent = os.path.dirname(os.getcwd())
 sys.path.append(parent)
 import ROOT as rt
 from modSyst import *
 from utils import *
-import CMS_lumi, tdrstyle
 
 rt.gROOT.SetBatch(1)
 start_time = time.time()
@@ -82,7 +79,9 @@ sigleg = 't#bar{t}t#bar{t}'
 scaleSignalsToXsec = False  # !!!!!Make sure you know signal x-sec used in input files to this script. If this is True, it will scale signal histograms by x-sec in weights.py!!!!!
 scaleSignals = False
 sigScaleFact = 20  # put -1 if auto-scaling wanted
-tempsig='templates_'+iPlot+'_'+sig+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
+# tempsig='templates_'+iPlot+'_'+sig+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
+tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
+
 
 ttProcList = ['ttnobb','ttbb']
 bkgProcList = ttProcList#+['top','ewk','qcd']
@@ -349,11 +348,11 @@ for numtag, tag in enumerate(tagList):
         totalBkgTemp.SetPointEYhigh(ibin - 1, math.sqrt(errorUp + errorNorm + errorStatOnly))
         totalBkgTemp.SetPointEYlow(ibin - 1, math.sqrt(errorDn + errorNorm + errorStatOnly))
     h1error = totalBkgTemp.Clone()
-    totalBkgTemp2 = rt.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'All'))
-    for ibin in range(1, hMCttjetsMerged.GetNbinsX() + 1):
+    totalBkgTemp2 = rt.TGraphAsymmErrors(hMC2ttjetsMerged.Clone(hMC2ttjetsMerged.GetName() + 'All'))
+    for ibin in range(1, hMC2ttjetsMerged.GetNbinsX() + 1):
         errorUp = 0.
         errorDn = 0.
-        errorStatOnly = hMCttjetsMerged.GetBinError(ibin) ** 2
+        errorStatOnly = hMC2ttjetsMerged.GetBinError(ibin) ** 2
         errorNorm = 0.
         for proc in ['ttbb', 'ttnobb']:
             try:
@@ -537,10 +536,12 @@ for numtag, tag in enumerate(tagList):
     # ---------------------------------------------------------------------------------------------------------------
     if statVal > 9: statValstr = str(statVal)[:2] + 'p'
     else: statValstr = '0p'+str(statVal)[2:]
-    savePrefixmerged = templateDir.replace(cutString, '') + templateDir.split('/')[-2]+'TRFtables'+statType+'/'
-    if not os.path.exists(savePrefixmerged): os.system('mkdir ' + savePrefixmerged)
+    text1DtrfDir = templateDir.replace(cutString, '') + templateDir.split('/')[-2]+'TRFtables'+statType+'/'
+    if not os.path.exists(text1DtrfDir): os.system('mkdir ' + text1DtrfDir)
+    pltr.ratioFileName = text1DtrfDir + 'MCeff_AllBins_J' + tag[4] + '_B' + tag[3] + '_isL'+ statValstr+'.txt'
+
     # Create standrd Image Prefix
-    savePrefixmerged = templateDir.replace(cutString, '') + 'ImagesNew/'
+    savePrefixmerged = templateDir.replace(cutString, '') + 'ImagesNew_B'+tag[3]+'/'
     if not os.path.exists(savePrefixmerged): os.system('mkdir ' + savePrefixmerged)
     savePrefixmerged += histPrefixE.replace('isE', 'isL') + isRebinned.replace('_rebinned_stat1p1', '') + saveKey
     if nhottlist[0] == '0p': savePrefixmerged = savePrefixmerged.replace('nHOT0p_', '')
@@ -574,9 +575,10 @@ for numtag, tag in enumerate(tagList):
     pltr.extraText = '#splitline{Work In Progress (Simulation)}{ ' + flvString + ', #geq0 t, ' + tagString + '}'
     pltr.tag = tag
     pltr.pullXTitle = 'TRF^{#geq ' + tag[3][:-1] + 'b }_{b}'
-    pltr.ratioFileName = savePrefixmerged + 'MCeff_AllBins_J' + tag[4] + '_B' + tag[3] + '_isL'+ statValstr+'new.txt'
+    pltr.printRatioTxt = True
     pltr.saveImagePng = savePrefixmerged
     pltr.ratioPlotter1D()
+    pltr.printRatioTxt = False
 
     # ---------------------------------------------------------------------------------------------------------------
     #    Numerator plot with flavour being shown
@@ -751,6 +753,350 @@ for numtag, tag in enumerate(tagList):
     pltr.ratioPlotter1D()
     # ---------------------------------------------------------------------------------------------------------------
 
+    histPrefixE = 'AK4HT_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
+    histNameTemp = histPrefixE+ 'chTTjj'
+    libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False)
+    libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged2, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Denr',_tS=tagStr, _doFlav=False)
+    for bcutN in bcutRegionList:
+        libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile, _procList=bkgProcList,_histNameTemp=histNameTemp + 'Numr', _tS=tagStr, _preStr=bcutN,_doFlav=False)
+        libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged2, _inputFiles=inputFile, _procList=bkgProcList,_histNameTemp=histNameTemp + 'Denr', _tS=tagStr, _preStr=bcutN,_doFlav=False)
+
+    # Create TTJets(ttbb+ttother) Denominator Histograms
+    hMC2ttjetsMerged = bkghistsmerged2['ttbb' + 'isL' + tagStr].Clone()
+    hMC2ttjetsMerged.Add(bkghistsmerged2['ttnobb' + 'isL' + tagStr])
+    hMC2ttjetsMerged.SetDirectory(0)
+    # Create TTJets(ttbb+ttother) Numerator Histograms
+    hMCttjetsMerged = bkghistsmerged['ttbb' + 'isL' + tagStr].Clone()
+    hMCttjetsMerged.Add(bkghistsmerged['ttnobb' + 'isL' + tagStr])
+    hMCttjetsMerged.SetDirectory(0)
+    for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
+        # Create TTJets(ttbb+ttother) Denominator flavour Histograms
+        hMC2ttjetsMergedflav['Bin' + bcTruthBinInx] = bkghistsmerged2['ttbb' + 'isL' + tagStr+'Bin' + bcTruthBinInx].Clone()
+        hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].Add(bkghistsmerged2['ttnobb' + 'isL' + tagStr+'Bin' + bcTruthBinInx])
+        hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].SetDirectory(0)
+        # Create TTJets(ttbb+ttother) Numerator flavour Histograms
+        hMCttjetsMergedflav['Bin' + bcTruthBinInx] = bkghistsmerged['ttbb' + 'isL' + tagStr+'Bin' + bcTruthBinInx].Clone()
+        hMCttjetsMergedflav['Bin' + bcTruthBinInx].Add(bkghistsmerged['ttnobb' + 'isL' + tagStr+'Bin' + bcTruthBinInx])
+        hMCttjetsMergedflav['Bin' + bcTruthBinInx].SetDirectory(0)
+    # Repeat for Bcuts B2 B3 B4p
+    for bcutN in bcutRegionList:
+        # Create TTJets(ttbb+ttother) Denominator Histograms
+        hMC2ttjetsMergedbcut[bcutN] = bkghistsmerged2[bcutN+'ttbb' + 'isL' + tagStr].Clone()
+        hMC2ttjetsMergedbcut[bcutN].Add(bkghistsmerged2[bcutN+'ttnobb' + 'isL' + tagStr])
+        hMC2ttjetsMergedbcut[bcutN].SetDirectory(0)
+
+        # Create TTJets(ttbb+ttother) Numerator Histograms
+        hMCttjetsMergedbcut[bcutN] = bkghistsmerged[bcutN+'ttbb' + 'isL' + tagStr].Clone()
+        hMCttjetsMergedbcut[bcutN].Add(bkghistsmerged[bcutN+'ttnobb' + 'isL' + tagStr])
+        hMCttjetsMergedbcut[bcutN].SetDirectory(0)
+
+        for flavType in ['Bflav', 'topBflav', 'Cflav', 'LiFlav']:
+            # Create TTJets(ttbb+ttother) Denominator flavour Histograms
+            try:
+                hMC2ttjetsMergedbcut[bcutN+flavType] = bkghistsmerged2[bcutN+'ttbb' + 'isL' + tagStr + flavType].Clone()
+                hMC2ttjetsMergedbcut[bcutN+flavType].Add(bkghistsmerged2[bcutN+'ttnobb' + 'isL' + tagStr + flavType])
+                hMC2ttjetsMergedbcut[bcutN+flavType].SetDirectory(0)
+            except:
+                pass
+            # Create TTJets(ttbb+ttother) Numerator flavour Histograms
+            try:
+                hMCttjetsMergedbcut[bcutN+flavType] = bkghistsmerged[bcutN+'ttbb' + 'isL' + tagStr + flavType].Clone()
+                hMCttjetsMergedbcut[bcutN+flavType].Add(bkghistsmerged[bcutN+'ttnobb' + 'isL' + tagStr + flavType])
+                hMCttjetsMergedbcut[bcutN+flavType].SetDirectory(0)
+            except:
+                pass
+        for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
+            # Create TTJets(ttbb+ttother) Denominator flavour Histograms
+            hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx] = bkghistsmerged2[bcutN + 'ttbb' + 'isL' + tagStr + 'Bin' + bcTruthBinInx].Clone()
+            hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].Add(bkghistsmerged2[bcutN + 'ttnobb' + 'isL' + tagStr + 'Bin' + bcTruthBinInx])
+            hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetDirectory(0)
+            # Create TTJets(ttbb+ttother) Numerator flavour Histograms
+            hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx] = bkghistsmerged[bcutN + 'ttbb' + 'isL' + tagStr + 'Bin' + bcTruthBinInx].Clone()
+            hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].Add(bkghistsmerged[bcutN + 'ttnobb' + 'isL' + tagStr + 'Bin' + bcTruthBinInx])
+            hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetDirectory(0)
+    hMCttjetsMerged, hMC2ttjetsMerged, xbinss = StatRebinHist(hMCttjetsMerged, hMC2ttjetsMerged, statVal,statType, onebin=oneBinned)
+    totalBkgTemp = rt.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'All'))
+    for ibin in range(1, hMCttjetsMerged.GetNbinsX() + 1):
+        errorUp = 0.
+        errorDn = 0.
+        errorStatOnly = hMCttjetsMerged.GetBinError(ibin) ** 2
+        errorNorm = 0.
+        for proc in ['ttbb', 'ttnobb']:
+            try:
+                errorNorm += getNormUnc(bkghistsmerged[proc + catStr], ibin, modelingSys[proc + '_' + modTag])
+            except:
+                pass
+
+        if doAllSys:
+            for syst in systematicList:
+                for proc in bkgProcList:
+                    try:
+                        errorPlus = systHistsMerged[proc + 'isL' + tagStr + syst + '__plus'].GetBinContent(ibin) - bkghistsmerged[proc + catStr].GetBinContent(ibin)
+                        errorMinus = bkghistsmerged[proc + catStr].GetBinContent(ibin) - systHistsMerged[proc + 'isL' + tagStr + syst + '__minus'].GetBinContent(ibin)
+                        if errorPlus > 0:
+                            errorUp += errorPlus ** 2
+                        else:
+                            errorDn += errorPlus ** 2
+                        if errorMinus > 0:
+                            errorDn += errorMinus ** 2
+                        else:
+                            errorUp += errorMinus ** 2
+                    except:
+                        pass
+
+        totalBkgTemp.SetPointEYhigh(ibin - 1, math.sqrt(errorUp + errorNorm + errorStatOnly))
+        totalBkgTemp.SetPointEYlow(ibin - 1, math.sqrt(errorDn + errorNorm + errorStatOnly))
+    h1error = totalBkgTemp.Clone()
+    totalBkgTemp2 = rt.TGraphAsymmErrors(hMC2ttjetsMerged.Clone(hMC2ttjetsMerged.GetName() + 'All'))
+    for ibin in range(1, hMC2ttjetsMerged.GetNbinsX() + 1):
+        errorUp = 0.
+        errorDn = 0.
+        errorStatOnly = hMC2ttjetsMerged.GetBinError(ibin) ** 2
+        errorNorm = 0.
+        for proc in ['ttbb', 'ttnobb']:
+            try:
+                errorNorm += getNormUnc(bkghistsmerged2[proc + catStr], ibin, modelingSys[proc + '_' + modTag])
+            except:
+                pass
+        if doAllSys:
+            for syst in systematicList:
+                for proc in bkgProcList:
+                    try:
+                        errorPlus = systHistsMerged2[proc + 'isL' + tagStr + syst + '__plus'].GetBinContent(ibin) - bkghistsmerged2[proc + catStr].GetBinContent(ibin)
+                        errorMinus = bkghistsmerged2[proc + catStr].GetBinContent(ibin) - systHistsMerged2[proc + 'isL' + tagStr + syst + '__minus'].GetBinContent(ibin)
+                        if errorPlus > 0:
+                            errorUp += errorPlus ** 2
+                        else:
+                            errorDn += errorPlus ** 2
+                        if errorMinus > 0:
+                            errorDn += errorMinus ** 2
+                        else:
+                            errorUp += errorMinus ** 2
+                    except:
+                        pass
+
+        totalBkgTemp2.SetPointEYhigh(ibin - 1, math.sqrt(errorUp + errorNorm + errorStatOnly))
+        totalBkgTemp2.SetPointEYlow(ibin - 1, math.sqrt(errorDn + errorNorm + errorStatOnly))
+    h2error = totalBkgTemp2.Clone()
+    for bcutN in  bcutRegionList:
+        hMCttjetsMergedbcut[bcutN] = hMCttjetsMergedbcut[bcutN].Rebin(len(xbinss) - 1, hMCttjetsMergedbcut[bcutN].GetName() + "reb", xbinss)
+        hMC2ttjetsMergedbcut[bcutN] = hMC2ttjetsMergedbcut[bcutN].Rebin(len(xbinss) - 1, hMC2ttjetsMergedbcut[bcutN].GetName() + "reb", xbinss)
+        totBkgTemp2[bcutN+catStr] = rt.TGraphAsymmErrors(hMCttjetsMergedbcut[bcutN].Clone(hMCttjetsMergedbcut[bcutN].GetName() + 'All'))
+        for ibin in range(1, hMCttjetsMergedbcut[bcutN].GetNbinsX() + 1):
+            errorUp = 0.
+            errorDn = 0.
+            errorStatOnly = hMCttjetsMergedbcut[bcutN].GetBinError(ibin) ** 2
+            errorNorm = 0.
+            for proc in ['ttbb', 'ttnobb']:
+                try: errorNorm += getNormUnc(bkghistsmerged[bcutN+proc + catStr], ibin, modelingSys[proc + '_' + modTag])
+                except: pass
+
+            if doAllSys:
+                for syst in systematicList:
+                    for proc in bkgProcList:
+                        try:
+                            errorPlus = systHistsMerged[bcutN+proc + 'isL' + tagStr + syst + '__plus'].GetBinContent(ibin) - bkghistsmerged[bcutN+proc + catStr].GetBinContent(ibin)
+                            errorMinus = bkghistsmerged[bcutN+proc + catStr].GetBinContent(ibin) - systHistsMerged[bcutN+proc + 'isL' + tagStr + syst + '__minus'].GetBinContent(ibin)
+                            if errorPlus > 0:
+                                errorUp += errorPlus ** 2
+                            else:
+                                errorDn += errorPlus ** 2
+                            if errorMinus > 0:
+                                errorDn += errorMinus ** 2
+                            else:
+                                errorUp += errorMinus ** 2
+                        except:  pass
+
+            totBkgTemp2[bcutN+catStr].SetPointEYhigh(ibin - 1, math.sqrt(errorUp + errorNorm + errorStatOnly))
+            totBkgTemp2[bcutN+catStr].SetPointEYlow(ibin - 1, math.sqrt(errorDn + errorNorm + errorStatOnly))
+        bkgHTgerr2bcut[bcutN] = totBkgTemp2[bcutN+catStr].Clone()
+        totBkgTemp1[bcutN+catStr] = rt.TGraphAsymmErrors(hMC2ttjetsMergedbcut[bcutN].Clone(hMC2ttjetsMergedbcut[bcutN].GetName() + 'All'))
+        for ibin in range(1, hMC2ttjetsMergedbcut[bcutN].GetNbinsX() + 1):
+            errorUp = 0.
+            errorDn = 0.
+            errorStatOnly = hMC2ttjetsMergedbcut[bcutN].GetBinError(ibin) ** 2
+            errorNorm = 0.
+            for proc in ['ttbb', 'ttnobb']:
+                try:
+                    errorNorm += getNormUnc(bkghistsmerged2[bcutN+proc + catStr], ibin, modelingSys[proc + '_' + modTag])
+                except:
+                    pass
+            if doAllSys:
+                for syst in systematicList:
+                    for proc in bkgProcList:
+                        try:
+                            errorPlus = systHistsMerged2[bcutN+proc + 'isL' + tagStr + syst + '__plus'].GetBinContent(ibin) - bkghistsmerged2[bcutN+proc + catStr].GetBinContent(ibin)
+                            errorMinus = bkghistsmerged2[bcutN+proc + catStr].GetBinContent(ibin) - systHistsMerged2[bcutN+proc + 'isL' + tagStr + syst + '__minus'].GetBinContent(ibin)
+                            if errorPlus > 0:
+                                errorUp += errorPlus ** 2
+                            else:
+                                errorDn += errorPlus ** 2
+                            if errorMinus > 0:
+                                errorDn += errorMinus ** 2
+                            else:
+                                errorUp += errorMinus ** 2
+                        except:
+                            pass
+
+            totBkgTemp1[bcutN+catStr].SetPointEYhigh(ibin - 1, math.sqrt(errorUp + errorNorm + errorStatOnly))
+            totBkgTemp1[bcutN+catStr].SetPointEYlow(ibin - 1, math.sqrt(errorDn + errorNorm + errorStatOnly))
+        bkgHTgerr1bcut[bcutN] = totBkgTemp1[bcutN+catStr].Clone()
+
+    # ---------------------------------------------------------------------------------------------------------------
+
+    # Numerator Attributes
+    hMCttjetsMerged.SetMarkerColor(rt.kBlue)
+    hMCttjetsMerged.SetLineColor(rt.kBlue)
+    hMCttjetsMerged.SetFillColor(0)
+    hMCttjetsMerged.SetLineWidth(2)
+    h1error.SetFillStyle(3004)
+    h1error.SetFillColor(rt.kBlack)
+    h1error.SetLineColor(rt.kBlack)
+    # Denominator Attributes
+    hMC2ttjetsMerged.SetMarkerColor(1)
+    hMC2ttjetsMerged.SetLineColor(1)
+    hMC2ttjetsMerged.SetFillColor(0)
+    hMC2ttjetsMerged.SetLineWidth(2)
+    h2error.SetFillStyle(3004)
+    h2error.SetFillColor(rt.kBlue)
+    h2error.SetLineColor(rt.kBlue)
+
+    # Flav Attributes
+    for bcutN in bcutRegionList:
+        hMCttjetsMergedbcut[bcutN].SetMarkerColor(rt.kBlue)
+        hMCttjetsMergedbcut[bcutN].SetLineColor(rt.kBlue)
+        hMCttjetsMergedbcut[bcutN].SetFillColor(0)
+        hMCttjetsMergedbcut[bcutN].SetLineWidth(2)
+        bkgHTgerr1bcut[bcutN].SetFillStyle(3004)
+        bkgHTgerr1bcut[bcutN].SetFillColor(rt.kBlack)
+        bkgHTgerr1bcut[bcutN].SetLineColor(rt.kBlack)
+        # Denominator Attributes
+        hMC2ttjetsMergedbcut[bcutN].SetMarkerColor(1)
+        hMC2ttjetsMergedbcut[bcutN].SetLineColor(1)
+        hMC2ttjetsMergedbcut[bcutN].SetFillColor(0)
+        hMC2ttjetsMergedbcut[bcutN].SetLineWidth(2)
+        bkgHTgerr2bcut[bcutN].SetFillStyle(3004)
+        bkgHTgerr2bcut[bcutN].SetFillColor(rt.kBlue)
+        bkgHTgerr2bcut[bcutN].SetLineColor(rt.kBlue)
+    hMC2ttjetsMerged.GetYaxis().SetTitle("N_{jets}")
+    hMCttjetsMerged.GetYaxis().SetTitle("N_{b-jets}")
+    for bcutN in bcutRegionList:
+        hMC2ttjetsMergedbcut[bcutN].GetYaxis().SetTitle("N_{jets}")
+        hMCttjetsMergedbcut[bcutN].GetYaxis().SetTitle("N_{b-jets}")
+
+    # ---------------------------------------------------------------------------------------------------------------
+    #    Plot with c-b Truth being shown
+    # ---------------------------------------------------------------------------------------------------------------
+    stackMChvTruth = rt.THStack("stackMChvTruth", "")
+    stackMC2hvTruth = rt.THStack("stackMC2hvTruth", "")
+    for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
+        # Numerator
+        try:
+            hMCttjetsMergedflav['Bin' + bcTruthBinInx] = hMCttjetsMergedflav['Bin' + bcTruthBinInx].Rebin(len(xbinss) - 1, hMCttjetsMergedflav['Bin' + bcTruthBinInx].GetName() + "reb1"+bcTruthBinInx, xbinss)
+            hMCttjetsMergedflav['Bin' + bcTruthBinInx].SetMarkerColor(genflavColors['Bin' + bcTruthBinInx])
+            hMCttjetsMergedflav['Bin' + bcTruthBinInx].SetLineColor(genflavColors['Bin' + bcTruthBinInx])
+            hMCttjetsMergedflav['Bin' + bcTruthBinInx].SetFillColor(genflavColors['Bin' + bcTruthBinInx])
+            hMCttjetsMergedflav['Bin' + bcTruthBinInx].SetLineWidth(2)
+            stackMChvTruth.Add(hMCttjetsMergedflav['Bin' + bcTruthBinInx])
+        except:
+            pass
+        # Denominator
+        try:
+            hMC2ttjetsMergedflav['Bin' + bcTruthBinInx] = hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].Rebin(
+                len(xbinss) - 1, hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].GetName() + "reb2", xbinss)
+            hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].SetMarkerColor(genflavColors['Bin' + bcTruthBinInx])
+            hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].SetLineColor(genflavColors['Bin' + bcTruthBinInx])
+            hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].SetFillColor(genflavColors['Bin' + bcTruthBinInx])
+            hMC2ttjetsMergedflav['Bin' + bcTruthBinInx].SetLineWidth(2)
+            stackMC2hvTruth.Add(hMC2ttjetsMergedflav['Bin' + bcTruthBinInx])
+        except:
+            pass
+
+    for bcutN in bcutRegionList:
+        # c-b Truth Hist Attributes
+        stackbkgHTbcut[bcutN + 'cbTruth'] = rt.THStack("stackMCcbTruth" + bcutN, "")
+        stackbkgHT2bcut[bcutN + 'cbTruth'] = rt.THStack("stackMC2cbTruth" + bcutN, "")
+        for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
+            # Numerator
+            hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx] = hMCttjetsMergedbcut[ bcutN + 'Bin' + bcTruthBinInx].Rebin(len(xbinss) - 1, hMCttjetsMergedbcut[ bcutN + 'Bin' + bcTruthBinInx].GetName() + "reb"+bcTruthBinInx, xbinss)
+            try:
+                hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetMarkerColor(genflavColors['Bin' + bcTruthBinInx])
+                hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetLineColor(genflavColors['Bin' + bcTruthBinInx])
+                hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetFillColor(genflavColors['Bin' + bcTruthBinInx])
+                hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetLineWidth(2)
+            except:
+                pass
+            stackbkgHTbcut[bcutN + 'cbTruth'].Add(hMCttjetsMergedbcut[bcutN+ 'Bin' + bcTruthBinInx])
+
+            # Denominator
+            hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx] = hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].Rebin(len(xbinss) - 1, hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].GetName() + "reb"+bcTruthBinInx, xbinss)
+            try:
+                hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetMarkerColor(genflavColors['Bin' + bcTruthBinInx])
+                hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetLineColor(genflavColors['Bin' + bcTruthBinInx])
+                hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetFillColor(genflavColors['Bin' + bcTruthBinInx])
+                hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx].SetLineWidth(2)
+            except:
+                pass
+            stackbkgHT2bcut[bcutN + 'cbTruth'].Add(hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx])
+
+    pltr.h1 = hMCttjetsMerged
+    pltr.s1 = stackMChvTruth
+    pltr.err1 = h1error
+    pltr.h1subKeyList = ['Bin1_', 'Bin2_', 'Bin3_', 'Bin4_']
+    pltr.h1LegSubEntry = genflavLegend.copy()
+    pltr.h1Subs = hMCttjetsMergedflav
+    pltr.saveImagePng = savePrefixmerged + '_AK4HT__Numerator_cbTruth'
+    pltr.emptyS1 = False
+    pltr.ratioPlotter1D()
+
+    # ---------------------------------------------------------------------------------------------------------------
+    #    Denominator plot with c-b Truth being shown
+    # ---------------------------------------------------------------------------------------------------------------
+    pltr.h2 = hMC2ttjetsMerged
+    pltr.s1 = stackMC2hvTruth
+    pltr.err2 = h2error
+    pltr.h1Subs = hMC2ttjetsMergedflav
+    pltr.saveImagePng = savePrefixmerged + '_AK4HT__Denominator_cbTruth'
+    pltr.ratioPlotter1D()
+
+    # ---------------------------------------------------------------------------------------------------------------
+    #    Numerator bcut B2 B3 B4p plot with c-b Truth being shown
+    # ---------------------------------------------------------------------------------------------------------------
+    for bcutN in bcutRegionList:
+        hMCttjetsMergedbcut[bcutN].SetLineColor(1)
+        pltr.h1 = hMCttjetsMergedbcut[bcutN]
+        pltr.s1 = stackbkgHTbcut[bcutN + 'cbTruth']
+        pltr.err1 = bkgHTgerr2bcut[bcutN]
+        if 'p' in bcutN: newtagString = tagString.replace('#geq2', '#geq'+bcutN[1:-2])
+        else: newtagString = tagString.replace('#geq2', bcutN[1:-1])
+        pltr.extraText = '#splitline{Work In Progress (Simulation)}{ ' + flvString + ', #geq0 t, ' + newtagString + '}'
+        for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
+            try:
+                pltr.h1Subs.update({'Bin'+bcTruthBinInx : hMCttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx]})
+            except:
+                pass
+        pltr.saveImagePng = savePrefixmerged + '_AK4HT_Numerator'+bcutN+'_subReg_cbTruth'
+        pltr.ratioPlotter1D()
+
+        # -----------------------------------------------------------------------------------------------------------
+        #    Denominator bcut B2 B3 B4p plot with flavour being shown
+        # -----------------------------------------------------------------------------------------------------------
+        hMC2ttjetsMergedbcut[bcutN].SetLineColor(1)
+        pltr.h2 = hMC2ttjetsMergedbcut[bcutN]
+        pltr.s1 = stackbkgHT2bcut[bcutN + 'cbTruth']
+        pltr.err2 = bkgHTgerr1bcut[bcutN]
+        for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
+            try:
+                pltr.h1Subs.update({'Bin' + bcTruthBinInx: hMC2ttjetsMergedbcut[bcutN + 'Bin' + bcTruthBinInx]})
+            except:
+                pass
+        pltr.saveImagePng = savePrefixmerged + '_AK4HT_Denominator' + bcutN + '_subReg_cbTruth'
+        if bcutN == 'B4p_': pltr.emptyS1 = True
+        pltr.ratioPlotter1D()
+    pltr.extraText = '#splitline{Work In Progress (Simulation)}{ ' + flvString + ', #geq0 t, ' + tagString + '}'
+
+    # ---------------------------------------------------------------------------------------------------------------
+
     bkghistsmerged.clear()
     bkghistsmerged2.clear()
     hMC2ttjetsMergedflav.clear()
@@ -759,11 +1105,12 @@ for numtag, tag in enumerate(tagList):
     stackbkgHT2bcut.clear()
     bkgHTgerr2bcut.clear()
     bkgHTgerr1bcut.clear()
-    print pltr.s1
+    # ---------------------------------------------------------------------------------------------------------------
+    # print pltr.s1
 
     histPrefixE = 'JetCountInPDG_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
-    libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False)
+    libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False, verbose=True)
     libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged2, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Denr',_tS=tagStr, _doFlav=False, _doBCTruth=False)
     bkghistsmerged['tt' + 'isL' + tagStr] = bkghistsmerged['ttnobb' + 'isL' + tagStr].Clone("newttNum")
     bkghistsmerged['tt' + 'isL' + tagStr].Add(bkghistsmerged['ttbb' + 'isL' + tagStr])
@@ -772,7 +1119,7 @@ for numtag, tag in enumerate(tagList):
     bkghistsmerged2['tt' + 'isL' + tagStr].Add(bkghistsmerged2['ttbb' + 'isL' + tagStr])
     bkghistsmerged2['tt' + 'isL' + tagStr].SetDirectory(0)
 
-    print pltr.s1
+    # print pltr.s1
     for proc in ['tt', 'ttbb', 'ttnobb']:
         bkghistsmerged2[proc + 'isL' + tagStr].SetTitle('; Jet flavour ID; Number of Jets per Event ')
         bkghistsmerged2[proc + 'isL' + tagStr].SetMarkerSize(1.8)
@@ -790,7 +1137,8 @@ for numtag, tag in enumerate(tagList):
         pltr.saveImagePng = savePrefixmerged + '_TaggedKeptPDGCount_'+proc
         pltr.ratioPlotter1D()
     # ---------------------------------------------------------------------------------------------------------------
-
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     histPrefixE = 'EventCount_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
     libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False)
@@ -822,7 +1170,8 @@ for numtag, tag in enumerate(tagList):
         pltr.saveImagePng = savePrefixmerged + '_TaggedKeptEventCount_' + proc
         pltr.ratioPlotter1D()
     # ---------------------------------------------------------------------------------------------------------------
-
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     pltr.hDrawText = ''
     histPrefixE = 'TopBDR_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
@@ -855,7 +1204,8 @@ for numtag, tag in enumerate(tagList):
         pltr.saveImagePng = savePrefixmerged + '_TopBDR_' + proc
         pltr.ratioPlotter1D()
     # ---------------------------------------------------------------------------------------------------------------
-
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     histPrefixE = 'TopBPt_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
     libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False)
@@ -901,7 +1251,8 @@ for numtag, tag in enumerate(tagList):
         pltr.saveImagePng = savePrefixmerged + '_TopBpt_' + proc
         pltr.ratioPlotter1D()
     # ---------------------------------------------------------------------------------------------------------------
-
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     histPrefixE = 'TopBEta_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
     libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False)
@@ -951,7 +1302,8 @@ for numtag, tag in enumerate(tagList):
         pltr.ratioPlotter1D()
 
     # ---------------------------------------------------------------------------------------------------------------
-
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     histPrefixE = 'TopBPhi_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
     libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False)
@@ -995,6 +1347,8 @@ for numtag, tag in enumerate(tagList):
     # ---------------------------------------------------------------------------------------------------------------
     #   2D Counts etc.
     # ---------------------------------------------------------------------------------------------------------------
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     pltr.hDrawText = ' TEXTE10 E'
     histPrefixE = 'JetCount2d_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
@@ -1078,6 +1432,8 @@ for numtag, tag in enumerate(tagList):
     # ---------------------------------------------------------------------------------------------------------------
     # Jet Pt vs Eta
     # ---------------------------------------------------------------------------------------------------------------
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     histPrefixE = 'JetPtVsAbsEta_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
     libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp+'Numr', _tS=tagStr, _doFlav=False, _doBCTruth=False)
@@ -1096,6 +1452,7 @@ for numtag, tag in enumerate(tagList):
     bkghistsmerged2['tt' + 'isL' + tagStr+'new'].SetContour(90)
     bkghistsmerged2['tt' + 'isL' + tagStr+'new'].GetZaxis().SetTitleOffset(0.85)
     bkghistsmerged2['tt' + 'isL' + tagStr+'new'].SetMarkerSize(1.8)
+    pltr.h1 = bkghistsmerged2['tt' + 'isL' + tagStr]
     pltr.saveImagePng = savePrefixmerged + '_tt_ptvseta_Denominator'
     pltr.ratioPlotter2D()   # --------------------------------------------------------------------------------------
 
@@ -1156,10 +1513,10 @@ for numtag, tag in enumerate(tagList):
                     sfbin += '                effJet_error_b3p.append(' + str(p_binError) + ') \n'
 
             scalefactorFile.write(sfbin)
-        scalefactorFile.write('z =' + str(pullXAxisList) + '\n')
         scalefactorFile.write('x =' + str(pullYAxisList) + '\n')
         scalefactorFile.write('y =' + str(pullContentList) + '\n')
         scalefactorFile.write('dy =' + str(pullErrorList))
+        scalefactorFile.write('z =' + str(pullXAxisList) + '\n')
         del pullContentList[:]
         del pullErrorList[:]
 
@@ -1174,6 +1531,8 @@ for numtag, tag in enumerate(tagList):
     # ---------------------------------------------------------------------------------------------------------------
     #      2D Reconstructed Pt vs True MC Pt
     # ---------------------------------------------------------------------------------------------------------------
+    bkghistsmerged2.clear()
+    bkghistsmerged.clear()
     pltr.hDrawText = '0'
     histPrefixE = 'TopBPt2D_' + lumiInTemplates + 'fb_isE_' + tagStr + '__'
     histNameTemp = histPrefixE+ 'chTTjj'
