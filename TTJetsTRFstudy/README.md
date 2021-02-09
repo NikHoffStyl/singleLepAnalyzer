@@ -19,4 +19,11 @@
       * ```markdown
         for jj in 5 ; do for bb in 2p ;do python  plotTemplates_TRFversion.py IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixator_vlq_JetallPt2021_2_8_23_20/el20mu20_MET60_MT60_1jet0_2jet00/ ${bb} ${jj} 0.1 out
         ```
-    
+   * `plotallTRFs.py`  is used as neat way to plot various TRFs on the same plot
+     * To Run do:
+     * ```markdown
+        python3 plotallTRFs.py --list2b  <pathTo1stFile>/MCeff_J6_B2p_isL0p1.txt <pathTo2ndtFile>/MCeff_J6_B2p_isL0p1.txt <pathTo3rdFile>/MCeff_J6_B2p_isL0p1.txt 
+                               --leglist <legendEntry1> <legendEntry2> <legendEntry3> --fout _exampleKey --indir <DirectoryUsedToSaveOutput>
+       ```
+     * Example Picture: \
+       ![plot](.readme_pics/JetallPt_Feb9_17JetallPtJ6B2sv1stat0p1.png)
