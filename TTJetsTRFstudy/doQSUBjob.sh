@@ -15,7 +15,6 @@ elif [[ "$REGION" == *"18"* ]];then
     YEAR=2018
 fi
 
-#INDIR=$1
 if [[ -z "${INDIR}" ]];then
     echo 'No Input Directory Given!'
     return 0
@@ -79,11 +78,22 @@ if [[ -z "${nJETS}" ]];then
     nJETS=4
 fi
 
+if [[ -z "${doTRUTH}" ]];then
+    echo 'Default doTRUTH: true'
+    doTRUTH='true'
+fi
+
+if [[ -z "${trfPATH}" ]];then
+    echo 'Default trfPATH: //'
+    trfPATH='IdealCaseTRFproduction/2017/J6/defaultTRFtables/MCeff_AllBins_J6_B2p_isL0p1.txt'
+fi
+
 
 cd $TMPDIR
 echo 'cmssw dir: ' ${CMSSW_BASE}
-export SKIMJOBDIR=/user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/makeTemplates
+export SKIMJOBDIR=/user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy
 cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/doHists.py .
+
 
 if [[ ${YEAR} -eq 2018 ]];then
 	cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgWeights/weights18.py .
@@ -100,95 +110,43 @@ if [[ "$REGION" == *"extractionProd"* ]];then
     #  trueTop Ideal case
 elif [[ "$REGION" == *"extractionImp"* ]];then
     echo "Using extraction Implementation analysis script"
-    if [[ "${INDIR}" == *"_wwght"* ]];then
-        wghtStr="allWeights"
-        echo "Using MC weights "
-        jetPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_JetallPt/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        jetEtaTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_JetEta/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        minDrTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_DRtoAllBJetsBtag/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        cp ${SKIMJOBDIR}/createAnalyzeConfigWght.py createAnalyzeConfig.py
-
-        if [[ "${INDIR}" == *"perEvent_PT_"* ]];then
-            python createAnalyzeConfig.py  analyze.py  ${jetPtTRF}
-        elif [[ "${INDIR}" == *"perEvent_PTDR_"* ]];then
-            python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${minDrTRF}
-        elif [[ "${INDIR}" == *"perEvent_PTETADR"* ]];then
-            echo "Running PTETADR"
-            python createAnalyzeConfig.py  analyze.py  ${jetPtTRF}  ${minDrTRF}  ${jetEtaTRF}
-            cat analyze.py
-        else
-            echo "No analyze.py given"
-        fi
-    elif [[ "${INDIR}" == *"_TruTopWght"* ]];then
+    if [[ "${doTRUTH}" == *"true"* ]];then
         wghtStr="allWeights_truTopRem"
         echo "Using MC weights true tops "
-        jetPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3allWeights_truTopRem/2017/J6/kinematics_extractionProdAna17_mixator_JetallPt2021_1_31_23_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J6_B2p_isL0p1.txt
-        jetEtaTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_JetEta2020_11_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL0p05.txt
-        minDrTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_DRtoAllBJetsBtag2020_11_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL0p05.txt
-        cp ${SKIMJOBDIR}/createAnalyzeConfigWghtTruTop.py createAnalyzeConfig.py
-        if [[ "${nBTAG}" == "2" ]]; then
-            if [[ "$REGION" == *"Add1"* ]];then
-                nBTAGnew="3"
-            elif [[ "$REGION" == *"Add2p"* ]];then
-                nBTAGnew="4p"
-            else
-                nBTAGnew=${nBTAG}
-            fi
-        else
-            nBTAGnew=${nBTAG}
-        fi
+        jetPtTRF=${SKIMJOBDIR}/${trfPATH}
+        cp ${SKIMJOBDIR}/createAnalyzeTRFImplementationConfig.py createAnalyzeConfig.py
+#        if [[ "${nBTAG}" == "2" ]]; then
+#            if [[ "$REGION" == *"Add1"* ]];then
+#                nBTAGnew="3"
+#            elif [[ "$REGION" == *"Add2p"* ]];then
+#                nBTAGnew="4p"
+#            else
+#                nBTAGnew=${nBTAG}
+#            fi
+#        else
+#            nBTAGnew=${nBTAG}
+#        fi
         if [[ "$REGION" == *"_corA"* ]];then
-            drCorrect=${SKIMJOBDIR}/AtlasMethod8/perEvent_PT_TruTopWght/2017/J${nJETS}_B${nBTAGnew}/kinematics_extractionImpAna17_xstrat_awnw_DRAdd1st2ndJetsBtag2021_1_11_11_10/el20mu20_MET60_MT60_1jet0_2jet00CorrectionWeightTable/MCratio_J${nJETS}_B2_isE.txt
+            drCorrect=${SKIMJOBDIR}/
         elif [[ "$REGION" == *"_corB"* ]];then
-            drCorrect=${SKIMJOBDIR}/AtlasMethod8/perEvent_PT_TruTopWght/2017/J${nJETS}_B${nBTAGnew}/kinematics_extractionImpAna17_xstrat_awnw_DRAdd1st2ndJetsPt2021_1_11_19_10/el20mu20_MET60_MT60_1jet0_2jet00CorrectionWeightTable/MCratio_J${nJETS}_B2_isE.txt
+            drCorrect=${SKIMJOBDIR}/
         elif [[ "$REGION" == *"_corC"* ]];then
-            drCorrect=${SKIMJOBDIR}/AtlasMethod8/perEvent_PT_TruTopWght/2017/J${nJETS}_B${nBTAGnew}/kinematics_extractionImpAna17_xstrat_awnw_DRtopBtoKeptJetsLeadBtag2021_1_11_19_30/el20mu20_MET60_MT60_1jet0_2jet00CorrectionWeightTable/MCratio_J${nJETS}_B2_isE.txt
+            drCorrect=${SKIMJOBDIR}/
         elif [[ "$REGION" == *"_corD"* ]];then
-            drCorrect=${SKIMJOBDIR}/AtlasMethod8/perEvent_PT_TruTopWght/2017/J${nJETS}_B${nBTAGnew}/kinematics_extractionImpAna17_xstrat_awnw_DRtopBtoKeptJetsLeadPt2021_1_11_19_30/el20mu20_MET60_MT60_1jet0_2jet00CorrectionWeightTable/MCratio_J${nJETS}_B2_isE.txt
+            drCorrect=${SKIMJOBDIR}/
         else
             echo "error hehehehe no event correction"
         fi
 
-
-        if [[ "${INDIR}" == *"perEvent_PT_"* ]];then
-            echo createAnalyzeConfig.py  analyze.py ${jetPtTRF} ${drCorrect}
-            python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${drCorrect}
-        elif [[ "${INDIR}" == *"perEvent_PTDR_"* ]];then
-            python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${minDrTRF}
-        elif [[ "${INDIR}" == *"perEvent_PTETADR"* ]];then
-            echo "Running PTETADR"
-            python createAnalyzeConfig.py  analyze.py  ${jetPtTRF}  ${minDrTRF}  ${jetEtaTRF}
-        else
-            echo "No analyze.py given"
-        fi
-        cat analyze.py
-    elif [[ "${INDIR}" == *"_LeadPtwWght"* ]];then
-        wghtStr="allWeights"
-        echo "Using MC weights leadpt"
-        jetLeadPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_JetLeadPt2020_10_25/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        jet2ndLeadPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_Jet2ndLeadPt2020_10_25/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        jet3rdLeadPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_Jet3rdLeadPt2020_10_25/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        if [[ "${nJETS}" == "6" ]];then
-            echo '4thTRF nJETS: '${nJETS}
-            jet4thLeadPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_Jet4thLeadPt2020_10_25/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        fi
-
-        cp ${SKIMJOBDIR}/createAnalyzeConfigLeadPtWght.py createAnalyzeConfig.py
-
-        if [[ "${nJETS}" == "6" ]];then
-            python createAnalyzeConfig.py  analyze.py ${jetLeadPtTRF} ${jet2ndLeadPtTRF} ${jet3rdLeadPtTRF} ${jet4thLeadPtTRF}
-            echo "python createAnalyzeConfig.py  analyze.py ${jetLeadPtTRF} ${jet2ndLeadPtTRF} ${jet3rdLeadPtTRF} ${jet4thLeadPtTRF}"
-        else
-            python createAnalyzeConfig.py  analyze.py ${jetLeadPtTRF} ${jet2ndLeadPtTRF} ${jet3rdLeadPtTRF}
-            echo "python createAnalyzeConfig.py  analyze.py ${jetLeadPtTRF} ${jet2ndLeadPtTRF} ${jet3rdLeadPtTRF}"
-        fi
+        echo createAnalyzeConfig.py  analyze.py ${jetPtTRF} ${drCorrect}
+        python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${drCorrect}
         cat analyze.py
     else
         wghtStr=""
         echo "NOT Using weights"
-        jetPtTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_JetallPt/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        jetEtaTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_JetEta/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
-        minDrTRF=${SKIMJOBDIR}/AtlasMethod8/perJet_v3${wghtStr}/2017/J${nJETS}/kinematics_extractionProdAna17_Denominator_DRtoAllBJetsBtag/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/MCeff_AllBins_J${nJETS}_B2p_isL05.txt
+        jetPtTRF=${SKIMJOBDIR}/${trfPATH}
+        jetEtaTRF=${SKIMJOBDIR}/
+        minDrTRF=${SKIMJOBDIR}/
         cp ${SKIMJOBDIR}/createAnalyzeConfig.py .
 
         if [[ "${INDIR}" == *"perEvent_PT_"* ]];then
