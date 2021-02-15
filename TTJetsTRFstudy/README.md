@@ -4,11 +4,18 @@
  which are used to obtain the TRF.
  Steps:
    * `analyze_trueTopRem.py` is used to produce histograms in the ideal case (i.e. only in MC where we have truth info)
-      * Run for all processes (or at least all TTJets) using `doHists.py`
+      * Run for all processes (or at least all TTJets) using `doHists.py` locally
+        * You check out what arguments are available using `--help` or `-h`
+        * Example for Running: 
+          ```
+           python -u doHists.py <outputDir> --year=2017 -vv
+          ```
       * Submit Job example for J5 and J6 (which is the TRF extraction region):
       * ```markdown
         for jj in 5  6; do for bb in 2p 3p;do indir=IdealCaseTRFproduction/2017/${jj} ; qsub -q localgrid -N d${bb}_${jj}_${iplot} -o ${indir}/${vk}${bb}_${iplot}.out -e ${indir}/${vk}${bb}_${iplot}.err -v INDIR=${PWD}/${indir},iPLOT=${iplot},REGION=extractionProdAna17,nBTAG=${bb},nJETS=${jj} doQSUBjob.sh;done;done;
         ``` 
+      * N.B. `doHists` knows if you are runing a job or are local 
+        (**Currently only if job runs in directory called /scratch**) 
    * `doTemplates_TRFversion.py` is used group processes and scale ttbb and ttnobb 
       * To Run do:
       * ```markdown
