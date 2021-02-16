@@ -83,13 +83,27 @@ if [[ -z "${doTRUTH}" ]];then
     doTRUTH='true'
 fi
 
+if [[ -z "${doImp}" ]];then
+    whatToDo=''
+else
+    whatToDo='-doI'
+fi
+
+if [[ -z "${doProd}" ]];then
+    whatToDo2=''
+else
+    whatToDo2='-doP'
+fi
+echo $whatToDo2
+
 if [[ -z "${trfPATH}" ]];then
-    echo 'Default trfPATH: //'
     trfPATH='IdealCaseTRFproduction/2017/J6/defaultTRFtables/MCeff_AllBins_J6_B2p_isL0p1.txt'
+    echo 'Default trfPATH: ' ${trfPATH}
 fi
 
 
 cd $TMPDIR
+echo 'TMPDIR' ${TMPDIR}  # /scratch/45100766.cream02.iihe.ac.be
 echo 'cmssw dir: ' ${CMSSW_BASE}
 export SKIMJOBDIR=/user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy
 cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/doHists.py .
@@ -97,50 +111,25 @@ cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJet
 
 if [[ ${YEAR} -eq 2018 ]];then
 	cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgWeights/weights18.py .
-    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/samples18TMP2021.py samples18.py
+    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/samples18.py .
 elif [[ ${YEAR} -eq 2017 ]];then
     echo "using 17 weights"
-    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgWeights/weights17.py weights.py
-    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgSamples/samplesTMP.py samples.py
+    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgWeights/weights17.py .
+    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgSamples/samples17.py .
 fi
 
+cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/doHists_plotList.json .
 if [[ "$REGION" == *"extractionProd"* ]];then
     echo "Using extraction trf production analysis script"
-    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem.py analyze.py
+    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem.py .
     #  trueTop Ideal case
 elif [[ "$REGION" == *"extractionImp"* ]];then
     echo "Using extraction Implementation analysis script"
     if [[ "${doTRUTH}" == *"true"* ]];then
-        wghtStr="allWeights_truTopRem"
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/eff_b2p.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/eff_b3p.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem_Implement.py .
         echo "Using MC weights true tops "
-        jetPtTRF=${SKIMJOBDIR}/${trfPATH}
-        cp ${SKIMJOBDIR}/createAnalyzeTRFImplementationConfig.py createAnalyzeConfig.py
-#        if [[ "${nBTAG}" == "2" ]]; then
-#            if [[ "$REGION" == *"Add1"* ]];then
-#                nBTAGnew="3"
-#            elif [[ "$REGION" == *"Add2p"* ]];then
-#                nBTAGnew="4p"
-#            else
-#                nBTAGnew=${nBTAG}
-#            fi
-#        else
-#            nBTAGnew=${nBTAG}
-#        fi
-        if [[ "$REGION" == *"_corA"* ]];then
-            drCorrect=${SKIMJOBDIR}/
-        elif [[ "$REGION" == *"_corB"* ]];then
-            drCorrect=${SKIMJOBDIR}/
-        elif [[ "$REGION" == *"_corC"* ]];then
-            drCorrect=${SKIMJOBDIR}/
-        elif [[ "$REGION" == *"_corD"* ]];then
-            drCorrect=${SKIMJOBDIR}/
-        else
-            echo "error hehehehe no event correction"
-        fi
-
-        echo createAnalyzeConfig.py  analyze.py ${jetPtTRF} ${drCorrect}
-        python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${drCorrect}
-        cat analyze.py
     else
         wghtStr=""
         echo "NOT Using weights"
@@ -164,7 +153,9 @@ elif [[ "$REGION" == *"extractionImp"* ]];then
     fi
 
 else
-    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/analyzeXonly.py analyze.py
+    echo "Region choice not allowed"
+    return 0
+    # cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/analyzeXonly.py analyze.py
 fi
 
 cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/utils.py .
@@ -174,9 +165,34 @@ python -u doHists.py ${INDIR} \
     --region=${REGION} \
     --nbtag=${nBTAG} \
     --njets=${nJETS} \
-    #--isCategorized=${isCATEGORIZED} \
-					#--isEM=${isEouM} \
-					#--nhott=${nHOTT} \
-					#--nttag=${nTTAG} \
-					#--nWtag=${nWTAG} \
+    ${whatToDo}\
+    ${whatToDo2}\
+    -v
 
+
+#        cp ${SKIMJOBDIR}/createAnalyzeTRFImplementationConfig.py createAnalyzeConfig.py
+#        if [[ "${nBTAG}" == "2" ]]; then
+#            if [[ "$REGION" == *"Add1"* ]];then
+#                nBTAGnew="3"
+#            elif [[ "$REGION" == *"Add2p"* ]];then
+#                nBTAGnew="4p"
+#            else
+#                nBTAGnew=${nBTAG}
+#            fi
+#        else
+#            nBTAGnew=${nBTAG}
+#        fi
+#        if [[ "$REGION" == *"_corA"* ]];then
+#            drCorrect=${SKIMJOBDIR}/
+#        elif [[ "$REGION" == *"_corB"* ]];then
+#            drCorrect=${SKIMJOBDIR}/
+#        elif [[ "$REGION" == *"_corC"* ]];then
+#            drCorrect=${SKIMJOBDIR}/
+#        elif [[ "$REGION" == *"_corD"* ]];then
+#            drCorrect=${SKIMJOBDIR}/
+#        else
+#            echo "error hehehehe no event correction"
+#        fi
+
+#        echo createAnalyzeConfig.py  analyze.py ${jetPtTRF} ${drCorrect}
+#        python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${drCorrect}
