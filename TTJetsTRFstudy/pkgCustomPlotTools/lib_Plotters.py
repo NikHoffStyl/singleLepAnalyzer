@@ -1,9 +1,10 @@
 import ROOT as rt
-from lib_PadFormat import *
-import os, sys, math
+from pkgCustomPlotTools.lib_PadFormat import *
+import os, sys, math, json
 parent = os.path.dirname(os.getcwd())
 sys.path.append(parent)
 import  tdrstyle , CMS_lumi
+import collections
 tdrstyle.setTDRStyle()
 
 zero = 1E-10
@@ -49,6 +50,7 @@ class Plotter(object):
         self.printRatioTxt        = False
 
         self.ratioFileName        = ''
+        self.ratioJSONfileName    = ''
         self.pullYTitle           = 'TRF^{#geq ' + self.tag[3][:-1] + 'b }_{b}'
         self.upperYTiltle         = 'Events /bin'
         self.upperZTitle          = 'Number of Events '
@@ -56,15 +58,15 @@ class Plotter(object):
         self.emptyHists           = True
         self.emptyS1              = False
 
-        self.h1                   = None  # rt.TH1D()
-        self.h2                   = None  # rt.TH1D()
-        self.s1                   = None  # rt.THStack()
-        self.err1                 = None  # rt.TGraphAsymmErrors()
-        self.err2                 = None  # rt.TGraphAsymmErrors()
-        self.h1Subs               = {}    # {string:rt.TH1} of histograms in self.s1
+        self.h1                   = None  # ROOT.TH1D()
+        self.h2                   = None  # ROOT.TH1D()
+        self.s1                   = None  # ROOT.THStack()
+        self.err1                 = None  # ROOT.TGraphAsymmErrors()
+        self.err2                 = None  # ROOT.TGraphAsymmErrors()
+        self.h1Subs               = {}    # {string:ROOT.TH1} of histograms in self.s1
         self.h1LegSubEntry        = {}    # {string:string} of histograms in self.s1
         self.h1subKeyList         = []    # [string] keys of self.h1Subs and self.h1LegSubEntry
-        self.hDrawn               = []    # [rt.TH1] here for some future additions
+        self.hDrawn               = []    # [ROOT.TH1] here for some future additions
         self.hDrawnLegEntry       = []    # [string] here for some future additions
         self.hDrawText            = ''
 
@@ -150,7 +152,7 @@ class Plotter(object):
         histCountL = 0
         for keyL in self.h1subKeyList:
             if self.h1Subs[keyL] is not None: histCountL+=1
-        histListTemp = [self.h1,self.h2]  + self.hDrawn  # + self.h1Subs.values()
+        histListTemp = [self.h1,self.h2]  + self.hDrawn
         histCountL += len(histListTemp) - histListTemp.count(None)
         legY1 = 0.87-histCountL*0.064   # i.e.  0.55 for 5  elements
         leg = rt.TLegend(0.7, legY1, 0.97, 0.87)
@@ -202,43 +204,60 @@ class Plotter(object):
             pull.Divide(self.h1, self.h2, 1, 1, "B")
 
             if self.printRatioTxt:
-                pullContentList = []
-                pullErrorList = []
-                pullXAxisList = []
-                with open(self.ratioFileName, 'w') as ratioFile:
-                    print "\n      WRITTING TO MCeff " + self.ratioFileName + " \n"
-                    ratioFile.write("\n MCstack \n")
-                    pullXAxisLowEdgeLists = []
-                    for bini in range(1, pull.GetNbinsX() + 1):
-                        p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
-                        p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
-                        p_binCont = pull.GetBinContent(bini)
-                        pullContentList.append(p_binCont)
-                        p_binError = pull.GetBinError(bini)
-                        pullErrorList.append(p_binError)
-                        pullXAxisList.append(p_lowEdge + ((p_highEdge - p_lowEdge) / 2))
-                        pullXAxisLowEdgeLists.append(p_lowEdge)
-                        if bini == 1:
-                            sfbin = '        if  jetPT < ' + str(p_highEdge) + ' : \n'
-                        elif bini == pull.GetNbinsX():
-                            sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' : \n'
-                        else:
-                            sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' and jetPT < ' + str(
-                                p_highEdge) + ' : \n'
-                        if self.tag[3] == '2p':
-                            sfbin += '            effJet.append(' + str(p_binCont) + ') \n'
-                            sfbin += '            effJet_error.append(' + str(p_binError) + ') \n'
-                        else:
-                            sfbin += '            effJet_b3p.append(' + str(p_binCont) + ') \n'
-                            sfbin += '            effJet_error_b3p.append(' + str(p_binError) + ') \n'
-                        ratioFile.write(sfbin)
-                    ratioFile.write('x =' + str(pullXAxisList) + '\n')
-                    ratioFile.write('y =' + str(pullContentList) + '\n')
-                    ratioFile.write('dy =' + str(pullErrorList) + '\n')
-                    ratioFile.write('lowx = ' + str(pullXAxisLowEdgeLists) + '\n')
-                    del pullXAxisList[:]
-                    del pullContentList[:]
-                    del pullErrorList[:]
+                # pullContentList = []
+                # pullErrorList = []
+                # pullXAxisList = []
+                # # listOfTuples = []
+                # with open(self.ratioFileName, 'w') as ratioFile:
+                #     print("\n      WRITTING TO MCeff " + self.ratioFileName + " \n")
+                #     ratioFile.write("\n MCstack \n")
+                #     pullXAxisLowEdgeLists = []
+                #     for bini in range(1, pull.GetNbinsX() + 1):
+                #         p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
+                #         p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
+                #         p_binCont = pull.GetBinContent(bini)
+                #         pullContentList.append(p_binCont)
+                #         p_binError = pull.GetBinError(bini)
+                #         pullErrorList.append(p_binError)
+                #         pullXAxisList.append(p_lowEdge + ((p_highEdge - p_lowEdge) / 2))
+                #         pullXAxisLowEdgeLists.append(p_lowEdge)
+                #         if bini == 1:
+                #             sfbin = '        if  jetPT < ' + str(p_highEdge) + ' : \n'
+                #         elif bini == pull.GetNbinsX():
+                #             sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' : \n'
+                #         else:
+                #             sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' and jetPT < ' + str(
+                #                 p_highEdge) + ' : \n'
+                #         if self.tag[3] == '2p':
+                #             sfbin += '            effJet.append(' + str(p_binCont) + ') \n'
+                #             sfbin += '            effJet_error.append(' + str(p_binError) + ') \n'
+                #         else:
+                #             sfbin += '            effJet_b3p.append(' + str(p_binCont) + ') \n'
+                #             sfbin += '            effJet_error_b3p.append(' + str(p_binError) + ') \n'
+                #         ratioFile.write(sfbin)
+                #         # listOfTuples.append([(p_lowEdge, p_highEdge),(0,5),(p_binCont, p_binError)])
+                #     ratioFile.write('x =' + str(pullXAxisList) + '\n')
+                #     ratioFile.write('y =' + str(pullContentList) + '\n')
+                #     ratioFile.write('dy =' + str(pullErrorList) + '\n')
+                #     ratioFile.write('lowx = ' + str(pullXAxisLowEdgeLists) + '\n')
+                #     # ratioFile.write('listsOfTuples = '+ str(listOfTuples)+'\n')
+                #     del pullXAxisList[:]
+                #     del pullContentList[:]
+                #     del pullErrorList[:]
+                #     # del listOfTuples[:]
+                # with open(self.ratioJSONfileName, "w") as write_file:
+                #     singleDiction = {}
+                #     for bini in range(1, pull.GetNbinsX() + 1):
+                #         p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
+                #         p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
+                #         p_binCont = pull.GetBinContent(bini)
+                #         p_binError = pull.GetBinError(bini)
+                #         pbinInfo = str((p_lowEdge, p_highEdge))
+                #         p_binInfo = (p_binCont, p_binError)
+                #         singleDiction.update({pbinInfo: p_binInfo})
+                #     json.dump(singleDiction, write_file, indent=2)
+                #     singleDiction.clear()
+                dumpHistToJSON(self.ratioJSONfileName, pull)
 
             for binNo in range(1, self.h2.GetNbinsX() + 1):
                 binLbl = binNo - 1
@@ -248,7 +267,7 @@ class Plotter(object):
                     pull.SetBinError(binNo,
                                      self.h1.GetBinError(binNo) / self.h2.GetBinContent(binNo))  # set ratio error, Keep This!
             lowerPullMList = [pull]
-            print  'pull.GetMaximum(): ', pull.GetMaximum()
+            print('pull.GetMaximum(): ', pull.GetMaximum())
             formatLowerHist(lowerPullMList, self.iPlot, self.tag[3][:-1], self.h2.GetNbinsX())
             # histTitleAndLabelSettings(pull, 1)
             pull.SetLineColor(rt.kBlue)
@@ -267,32 +286,24 @@ class Plotter(object):
             if pBinList:
                 normTRF = pull.Integral(pBinList[0], pBinList[len(pBinList) - 1],
                                         'width')  # Kept for use  if someone asks
-                print 'normTRF ====' + str(normTRF)
-                print ' bin1 ==== ' + str(pBinList[0])
-                print ' binLast ==== ' + str(pBinList[len(pBinList) - 1])
+                print('normTRF ====' + str(normTRF))
+                print(' bin1 ==== ' + str(pBinList[0]))
+                print(' binLast ==== ' + str(pBinList[len(pBinList) - 1]))
                 pullListContents = []
                 for binNo in range(pBinList[0], pBinList[len(pBinList) - 1]):
                     pullListContents.append(pull.GetBinContent(binNo))
                 if len(pBinList) < 1:
-                    print ' maxTRF ====' + str(max(pullListContents))
+                    print(' maxTRF ====' + str(max(pullListContents)))
 
             BkgOverBkg = pull.Clone("bkgOverbkg")
             pullUncBandNorm = rt.TGraphAsymmErrors(BkgOverBkg.Clone("pulluncTot"))
             for binNo in range(0, self.h1.GetNbinsX() + 2):
                 if len(pBinList) < 2 and binNo != 0: continue
                 if self.h2.GetBinContent(binNo) != 0:
-                    pullUncBandNorm.SetPointEYhigh(binNo - 1, math.sqrt(((self.err1.GetErrorYhigh(binNo - 1) * (
-                                self.h1.GetBinContent(binNo) / ((self.h2.GetBinContent(binNo)) ** 2))) ** 2) + ((
-                                                                                                                  self.err2.GetErrorYhigh(
-                                                                                                                      binNo - 1) * (
-                                                                                                                              1 / self.h2.GetBinContent(
-                                                                                                                          binNo))) ** 2)))
-                    pullUncBandNorm.SetPointEYlow(binNo - 1, math.sqrt(((self.err1.GetErrorYhigh(binNo - 1) * (
-                                self.h1.GetBinContent(binNo) / ((self.h2.GetBinContent(binNo)) ** 2))) ** 2) + ((
-                                                                                                                  self.err2.GetErrorYhigh(
-                                                                                                                      binNo - 1) * (
-                                                                                                                              1 / self.h2.GetBinContent(
-                                                                                                                          binNo))) ** 2)))
+                    if self.err2 is None: self.err2 = self.err1
+                    if self.err1 is None: self.err1 = self.err2
+                    pullUncBandNorm.SetPointEYhigh(binNo - 1, math.sqrt(((self.err1.GetErrorYhigh(binNo - 1) * (self.h1.GetBinContent(binNo) / ((self.h2.GetBinContent(binNo)) ** 2))) ** 2) + ((self.err2.GetErrorYhigh(binNo - 1) * (1 / self.h2.GetBinContent(binNo))) ** 2)))
+                    pullUncBandNorm.SetPointEYlow(binNo - 1, math.sqrt(((self.err1.GetErrorYhigh(binNo - 1) * (self.h1.GetBinContent(binNo) / ((self.h2.GetBinContent(binNo)) ** 2))) ** 2) + ((self.err2.GetErrorYhigh(binNo - 1) * (1 / self.h2.GetBinContent(binNo))) ** 2)))
             pullUncBandNorm.SetFillStyle(3001)
             pullUncBandNorm.SetFillColor(1)
             pullUncBandNorm.SetLineColor(1)
@@ -388,7 +399,7 @@ class Plotter(object):
 def histTitleAndLabelSettings(histogram, setIndx):
     """
 
-    :param histogram:  rt.TH1
+    :param histogram:  ROOT.TH1
     :param setIndx: Discriminator for a list of settings
     :return:
     """
@@ -444,7 +455,7 @@ def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histName
         _histNameList.append(_histNameTemp)
         _histNameTemp2 = _histNameTemp.replace('isE', 'isM')
         _histNameList.append(_histNameTemp2)
-        try:
+        if _inputFiles.Get(_preStr +_histNameList[0]):
             _hOut[_preStr + proc + 'isL' + _tS] = _inputFiles.Get(_preStr +_histNameList[0]).Clone()
             for hname in _histNameList:
                 if hname == _histNameList[0]: continue
@@ -453,46 +464,94 @@ def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histName
                 int2 = _hOut[_preStr + proc + 'isL' + _tS].Integral()
                 totProcMerged += _hOut[_preStr + proc + 'isL' + _tS].Integral()
             if verbose:
-                if int1 == int2: print '\n\n            ', int2 - int1, '\n\n'
-                print " Numerator of " + _histNameList[0] + " GetEntries = " + str(hOut.GetEntries())
-                print " Numerator of " + _histNameList[0] + " GetEffectiveEntries = " + str(hOut.GetEffectiveEntries())
-            _hOut[proc+'isL'+ _tS].SetDirectory(0)
-        except:
+                if int1 == int2: print('\n\n  Inegral Remains the same at ', abs(int2 - int1), '\n\n')
+                print(" Numerator of " + _histNameList[0] + " GetEntries = " + str(_hOut[_preStr + proc + 'isL' + _tS].GetEntries()))
+                print(" Numerator of " + _histNameList[0] + " GetEffectiveEntries = " + str(_hOut[_preStr + proc + 'isL' + _tS].GetEffectiveEntries()))
+            _hOut[_preStr +proc+'isL'+ _tS].SetDirectory(0)
+        else:
             if verbose:
-                print "There is no " + _histNameList[0] + " in input file!!! Skipping it....."
-                print "There is no " +  proc+'isL'+_tS + " in input file!!! Skipping it....."
+                print("There is no " + _histNameList[0] + " in input file!!! Skipping it.....")
+                print("There is no " +_preStr + proc+'isL'+_tS + " in input file!!! Skipping it.....")
             pass
         totProcMergedSub = 0.
         for flavType in ['Bflav', 'topBflav', 'Cflav', 'LiFlav']:
             if not _doFlav: continue
-            try:
-                _hOut[_preStr + proc + 'isL' + _tS+ flavType] = _inputFiles.Get(_preStr +_histNameList[0] + flavType).Clone()
+            histFromFile = _inputFiles.Get(_preStr +_histNameList[0] + flavType)
+            if histFromFile:
+                _hOut[_preStr + proc + 'isL' + _tS+ flavType] = histFromFile.Clone()
                 for hname in _histNameList:
                     if hname == _histNameList[0]: continue
-                    _hOut[_preStr + proc + 'isL' + _tS+ flavType].Add(_inputFiles.Get(_preStr +hname + flavType))
+                    histFromFile = _inputFiles.Get(_preStr +hname + flavType)
+                    _hOut[_preStr + proc + 'isL' + _tS+ flavType].Add(histFromFile)
                 totProcMergedSub += _hOut[_preStr + proc + 'isL' + _tS+ flavType].Integral()
                 _hOut[_preStr + proc + 'isL' + _tS+ flavType].SetDirectory(0)
-            except:
-                if verbose: print "There is no " + flavType + proc + " in input file!!! Skipping it....."
+            else:
+                if verbose: print("There is no " + flavType + proc + " in input file!!! Skipping it.....")
                 pass
         if abs(totProcMerged - totProcMergedSub) > zero:
-            if verbose: print 'totProcMergedSub : ', totProcMergedSub, '  totProcMerged:  ', totProcMerged
+            if verbose: print('totProcMergedSub : ', totProcMergedSub, '  totProcMerged:  ', totProcMerged)
             # sys.exit('\n [ERROR]: Yield Error between hists!!!')
         totProcMergedSub = 0.
         for bcTruthBinInx in ['1_', '2_', '3_', '4_']:
             if not _doBCTruth: continue
-            try:
-                _hOut[_preStr + proc + 'isL' + _tS+ 'Bin' + bcTruthBinInx] = _inputFiles.Get(_preStr +'Bin' + bcTruthBinInx + _histNameList[0]).Clone()
+            histFromFile = _inputFiles.Get(_preStr +'Bin' + bcTruthBinInx + _histNameList[0])
+            if histFromFile:
+                _hOut[_preStr + proc + 'isL' + _tS+ 'Bin' + bcTruthBinInx] = histFromFile.Clone()
                 for hname in _histNameList:
                     if hname == _histNameList[0]: continue
                     _hOut[_preStr + proc + 'isL' + _tS+ 'Bin' + bcTruthBinInx].Add(_inputFiles.Get(_preStr +'Bin' + bcTruthBinInx + hname))
                 totProcMergedSub += _hOut[_preStr + proc + 'isL' + _tS+ 'Bin' + bcTruthBinInx].Integral()
                 _hOut[_preStr + proc + 'isL' + _tS+ 'Bin' + bcTruthBinInx].SetDirectory(0)
-            except:
-                if verbose: print "There is no " + bcTruthBinInx + proc + " in input file!!! Skipping it....."
+            else:
+                if verbose: print("There is no " + bcTruthBinInx + proc + " in input file!!! Skipping it.....")
                 pass
         if abs(totProcMerged - totProcMergedSub) > zero:
-            if verbose: print 'totProcMergedSub : ', totProcMergedSub, '  totProcMerged:  ', totProcMerged
+            if verbose: print('totProcMergedSub : ', totProcMergedSub, '  totProcMerged:  ', totProcMerged)
             # sys.exit('\n [ERROR]: Yield Error between hists!!!')
         totProcMergedSub = 0.
 
+
+# def getHistFromFile(fileName=None, histName='', verbose=False):
+#     histOutTemp = fileName.Get(histName)
+#     if histOut is not None:
+#         histOut = histOutTemp.Clone(histOutTemp.GetName() + '_new')
+#         return histOut, True
+#     else:
+#         if verbose: print("There is no " + histName+ " in input file!!! Skipping it.....")
+#         pass
+#     return None, False
+
+def dumpHistToJSON(ratioJSONfileName=None, hist=None):
+    if ratioJSONfileName is None: return False
+    if hist is None:  return False
+    with open(ratioJSONfileName, "w") as write_file:
+        singleDiction = {}
+        for bini in range(1, hist.GetNbinsX() + 1):
+            p_lowEdge = hist.GetXaxis().GetBinLowEdge(bini)
+            p_highEdge = (p_lowEdge + hist.GetXaxis().GetBinWidth(bini))
+            p_binCont = hist.GetBinContent(bini)
+            p_binError = hist.GetBinError(bini)
+            pbinInfo = str((p_lowEdge, p_highEdge))
+            p_binInfo = (p_binCont, p_binError)
+            singleDiction.update({pbinInfo: p_binInfo})
+        json.dump(singleDiction, write_file, indent=2)
+        singleDiction.clear()
+    return True
+
+
+def update(d, u):
+    """
+    A function for updating nested dictionaries
+    Thanks to stckoverflow
+    :param d: dictionary
+    :type d: dict
+    :param u: updated dictionary elements
+    :type u: dict
+    :return:
+    """
+    for k, v in u.iteritems():
+        if isinstance(v, collections.Mapping):
+            d[k] = update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d

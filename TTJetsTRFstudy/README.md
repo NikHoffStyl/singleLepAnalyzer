@@ -14,7 +14,7 @@
         ``` 
       * N.B. `doHists` knows if you are runing a job or are local 
         (**Currently only if job runs in directory called /scratch**) 
-   * [`doTemplates_TRFversion.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/doTemplates_TRFversion.py) is used group processes and scale ttbb and tt-other 
+   * [`doTemplates_TRFversion.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/doTemplates_TRFversion.py) is used to group processes and scale ttbb and tt-other 
       * To Run do:
       * ```markdown
         python doTemplates_TRFversion.py R17 <pathToPickleFiles>/el20mu20_MET60_MT60_1jet0_2jet00/
@@ -58,3 +58,10 @@
   * The plan was(/is) to make this set of scripts easy to run by simply editting a configuration file such as a json or yaml;
    and have flexibility with command-line arguments; such as the user does not need to edit all these scripts and debug before running.
    Unfortunatelly, if the user wants to add new output histograms coming from analyze step, then this may require a little more effort by the user. 
+   * Tips for checking some things if you do decide to do this:
+     * Check/confirm that your histogram is in the pickled file before trying to get it , try:
+        ```markdown
+            cat <path-to-file>/file.p  | grep "Name_Of_My_New_Histogram" |wc -l
+        ```
+     * Check/confirm the histogram is in the outputed root-file by using `rootbrowse`
+     

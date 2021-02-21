@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+from __future__ import print_function, division
 
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
@@ -20,9 +20,9 @@ parser.add_argument('--nttag', nargs='+', choices=('0','1p','0p'),
                     default=None, help='Top tag multiplicity')
 parser.add_argument('--nWtag', nargs='+', choices=('0','1p','0p'),
                     default=None, help='W-tag multiplicity')
-parser.add_argument('--nbtag', nargs='+', choices=('2p','3p','2','3', '4p'), default=['2p','3p'], help='B-tag Multiplicity')
+parser.add_argument('--nbtag', nargs='+', choices=('2p','3p','2','3', '4p'), default=None, help='B-tag Multiplicity')
 parser.add_argument('--njets', nargs='+', choices=('4', '5', '6', '7', '8', '9', '10p', '5a6'),
-                    default=['5','6','7','8','9','10p'], help='Jet multiplicity')
+                    default=None, help='Jet multiplicity')
 parser.add_argument('--doAllSys', help='Do all systematics?', action='store_true')
 parser.add_argument('--addCRsys', help='Add control region systematics?', action='store_true')
 parser.add_argument('--doNormByBinWidth', help='Normalising bins using bin width', action='store_true')
@@ -55,7 +55,7 @@ elif argss.year==2018:
     lumi = 59.9
     from pkgWeights.weights18 import *
     year = 'R18'
-print "Run-Year: " + year
+print("Run-Year: " + year)
 
 rt.gROOT.SetBatch(1)
 start_time = time.time()
@@ -66,21 +66,17 @@ templateDir=os.getcwd()+'/'
 templateDir += argss.indir[0]
 
 isEMlist = argss.isEM
-catList = ['is'+x for x in os.walk(templateDir).next()[1] if x.startswith('E_') or x.startswith('M_')]
+catList = ['is'+x for x in next(os.walk(templateDir))[1] if x.startswith('E_') or x.startswith('M_')]
 catList.sort()
-print "catList: " + str(catList)
 tagList = [x[4:] for x in catList if 'isE' in x]
-print "tagList: " + str(tagList)
 nhottlist = list(set([x.split('_')[0][4:] for x in tagList]))
 nttaglist = list(set([x.split('_')[1][2:] for x in tagList]))
 nWtaglist = list(set([x.split('_')[2][2:] for x in tagList]))
 nbtaglist = list(set([x.split('_')[3][2:] for x in tagList]))
 njetslist = list(set([x.split('_')[4][2:] for x in tagList]))
-print "nbtaglist: " + str(nbtaglist)
 if nbtaglist is not  None: nbtaglist = argss.nbtag
 if njetslist is not None: njetslist = argss.njets
 iPlot = [x.replace('bkghists_','')[:-2] for x in os.listdir(templateDir+'/'+catList[0][2:]) if 'bkghists_' in x and '.p' in x][0]
-print "iPlot: " + iPlot
 cutString='el20mu20_MET60_MT60_1jet0_2jet00'
 
 lumiInTemplates = str(targetlumi / 1000).replace('.', 'p')  # 1/fb
@@ -109,9 +105,9 @@ zero = 1E-12
 
 tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
 if not os.path.exists(templateDir+tempsig):
-    print "ERROR: File does not exits: "+templateDir+tempsig
+    print("ERROR: File does not exits: "+templateDir+tempsig)
     os._exit(1)
-print "READING: "+templateDir+tempsig
+print("READING: "+templateDir+tempsig)
 inputFile = rt.TFile(templateDir+tempsig)
 
 tagListTemp = list(itertools.product(nhottlist,nttaglist,nWtaglist,nbtaglist,njetslist))
@@ -216,12 +212,12 @@ if __name__ == '__main__':
         # iPlot ='KeptLeadJetEta'
         iPlot = argss.variableName
         histPrefixE = iPlot+ '_' + lumiInTemplates + 'fb_isE_' + tagStr+ '__'
-        print histPrefixE
+        if argss.verbose > 0 : print(histPrefixE)
         # preFixPlotB = 'B2_EstB2To3'
         preFixPlotB = argss.preFixPlotB
         # Get histograms from root file and merge e and mu channel histograms
         histNameTemp = histPrefixE+ 'chTTjj'+'_Denr'
-        print preFixPlotB +'_'+ histNameTemp
+        if argss.verbose > 0:  print(preFixPlotB +'_'+ histNameTemp)
         libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmergedUp, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp, _tS=tagStr, _preStr=preFixPlotB+'Up_')
         libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp, _tS=tagStr, _preStr=preFixPlotB+'_')
         libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmergedDn, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp, _tS=tagStr, _preStr=preFixPlotB+'Dn_')
@@ -253,14 +249,15 @@ if __name__ == '__main__':
 
         prob_KS = hMCttjetsMerged.KolmogorovTest(hMC2ttjetsMerged)
         prob_KS_X = hMCttjetsMerged.KolmogorovTest(hMC2ttjetsMerged, "X") #does not return the Kolmogorov probability, but returns the fraction of pseudo-experiments with a distance larger than the one observed in the data.
-        print '/' * 80, '\n', '*' * 80
-        print '0 Data Driven tt inclusive MC nBins = ', hMCttjetsMerged.GetNbinsX()
-        print 'Direct tt inclusive MC nBins = ', hMC2ttjetsMerged.GetNbinsX()
-        print histPrefixE + '_KolmogorovSmirnov =', prob_KS
-        print histPrefixE + '_KolmogorovSmirnovX(pseudo experiments) =', prob_KS_X
-        # print histPrefix + '_Chi2Test:'
-        # print "  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof
-        print '*' * 80, '\n', '/' * 80
+        if argss.verbose > 0:
+            print('/' * 80, '\n', '*' * 80)
+            print('0. Data Driven tt inclusive MC nBins = ', hMCttjetsMerged.GetNbinsX())
+            print('Direct tt inclusive MC nBins = ', hMC2ttjetsMerged.GetNbinsX())
+            print(histPrefixE + '_KolmogorovSmirnov =', prob_KS)
+            print(histPrefixE + '_KolmogorovSmirnovX(pseudo experiments) =', prob_KS_X)
+            # print(histPrefixE + '_Chi2Test:')
+            # print("  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof)
+            print('*' * 80, '\n', '/' * 80)
 
         hMCttjetsMerged, hMC2ttjetsMerged, xbinss = StatRebinHist(hMCttjetsMerged, hMC2ttjetsMerged, statVal, statType,
                                                                   onebin=False)
@@ -268,14 +265,15 @@ if __name__ == '__main__':
         hMCttjetsMergedUp = hMCttjetsMergedUp.Rebin(len(xbinss) - 1, hMCttjetsMergedUp.GetName() + "reb", xbinss)
         hMCttjetsMergedDn = hMCttjetsMergedDn.Rebin(len(xbinss) - 1, hMCttjetsMergedDn.GetName() + "reb", xbinss)
 
-        print '/' * 80, '\n', '*' * 80
-        print '0 Data Driven tt inclusive MC nBins = '  , hMCttjetsMerged.GetNbinsX()
-        print 'Direct tt inclusive MC nBins = ' , hMC2ttjetsMerged.GetNbinsX()
-        print histPrefixE + '_KolmogorovSmirnov =', prob_KS
-        print histPrefixE + '_KolmogorovSmirnovX(pseudo experiments) =', prob_KS_X
-        # print histPrefix + '_Chi2Test:'
-        # print "  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof
-        print '*' * 80, '\n', '/' * 80
+        if argss.verbose > 0:
+            print('/' * 80, '\n', '*' * 80)
+            print('1. Data Driven tt inclusive MC nBins = ', hMCttjetsMerged.GetNbinsX())
+            print('Direct tt inclusive MC nBins = ', hMC2ttjetsMerged.GetNbinsX())
+            print(histPrefixE + '_KolmogorovSmirnov =', prob_KS)
+            print(histPrefixE + '_KolmogorovSmirnovX(pseudo experiments) =', prob_KS_X)
+            # print(histPrefixE + '_Chi2Test:')
+            # print("  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof)
+            print('*' * 80, '\n', '/' * 80)
 
         hMCttjetsMerged = hMCttjetsMerged.Clone()
         totBkgTemp1[catStr] = rt.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'shapeOnly'))
@@ -290,17 +288,13 @@ if __name__ == '__main__':
             try:
                 errorPlus = hMCttjetsMergedUp.GetBinContent(ibin) - hMCttjetsMerged.GetBinContent(ibin)
                 errorMinus = hMCttjetsMerged.GetBinContent(ibin) - hMCttjetsMergedDn.GetBinContent(ibin)
-                if ibin == 1: print "ttHT = ", hMCttjetsMerged.GetBinContent(ibin), "  ttHTDn = ", hMCttjetsMergedDn.GetBinContent(ibin), "   ttHTUp = ", hMCttjetsMergedUp.GetBinContent(ibin)
-                if errorPlus > 0:
-                    errorUp = errorPlus ** 2
-                else:
-                    errorDn = errorPlus ** 2
-                if errorMinus > 0:
-                    errorDn = errorMinus ** 2
-                else:
-                    errorUp = errorMinus ** 2
+                if ibin == 1: print("ttHT = ", hMCttjetsMerged.GetBinContent(ibin), "  ttHTDn = ", hMCttjetsMergedDn.GetBinContent(ibin), "   ttHTUp = ", hMCttjetsMergedUp.GetBinContent(ibin))
+                if errorPlus > 0:  errorUp = errorPlus ** 2
+                else:  errorDn = errorPlus ** 2
+                if errorMinus > 0:  errorDn = errorMinus ** 2
+                else: errorUp = errorMinus ** 2
             except:
-                print "failure up down data driven errors"
+                print("failure up down data driven errors")
                 pass
             dataDrivenTtBkgTemp[catStr].SetPointEYhigh(ibin - 1, math.sqrt(errorUp))
             dataDrivenTtBkgTemp[catStr].SetPointEYlow(ibin - 1, math.sqrt(errorDn))
@@ -313,19 +307,19 @@ if __name__ == '__main__':
         prob_chi2 = hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged, "WW")
         chi2 = hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged, "WW CHI2")
         if hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged, "WW CHI2/NDF") != 0:
-            ndof = int(
-                hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged, "WW CHI2") / hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged,
-                                                                                                    "WW CHI2/NDF"))
+            ndof = int(hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged, "WW CHI2") / hMC2ttjetsMerged.Chi2Test(hMCttjetsMerged, "WW CHI2/NDF"))
         else:
             ndof = 0
-        print '/' * 80, '\n', '*' * 80
-        print '2 Data Driven tt inclusive MC nBins = ', hMCttjetsMerged.GetNbinsX()
-        print 'Direct tt inclusive MC nBins = ', hMC2ttjetsMerged.GetNbinsX()
-        print histPrefixE + '_KolmogorovSmirnov =', prob_KS
-        print histPrefixE + '_KolmogorovSmirnovX =', prob_KS_X
-        print histPrefixE + '_Chi2Test:'
-        print "  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof
-        print '*' * 80, '\n', '/' * 80
+        if argss.verbose > 0:
+            print('/' * 80, '\n', '*' * 80)
+            print('2 Data Driven tt inclusive MC nBins = ', hMCttjetsMerged.GetNbinsX())
+            print('Direct tt inclusive MC nBins = ', hMC2ttjetsMerged.GetNbinsX())
+            print(histPrefixE + '_KolmogorovSmirnov =', prob_KS)
+            print(histPrefixE + '_KolmogorovSmirnovX(pseudo experiments) =', prob_KS_X)
+            print(histPrefixE + '_Chi2Test:')
+            print("  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof)
+            print( '*' * 80, '\n', '/' * 80)
+
 
         # Numerator Attributes
         hMCttjetsMerged.SetMarkerColor(rt.kRed-3)
@@ -366,20 +360,21 @@ if __name__ == '__main__':
         pltr.L = 1.2 * pltr.L
         pltr.R = 0.2 * pltr.R
         pltr.T = 0.9 * pltr.T
-        pltr.h2 = hMCttjetsMerged
-        pltr.h1 = hMC2ttjetsMerged
+        pltr.h1 = hMCttjetsMerged
+        pltr.h2 = hMC2ttjetsMerged
+        pltr.err1 = h1error
         pltr.err2 = h1error
-        pltr.h1LegEntry = "Direct-MC"
-        pltr.h2LegEntry = "Estimate-MC"
-        pltr.h1LegSubEntry = genflavLegend.copy()
+        pltr.h2LegEntry = "Direct-MC"
+        pltr.h1LegEntry = "Estimate-MC"
+        # pltr.h1LegSubEntry = genflavLegend.copy()
         pltr.lumi_13TeV = str(lumi) + " fb^{-1}"
         pltr.writeExtraText = 1
         pltr.lumi_sqrtS = "13 TeV"
-        pltr.extraText = '#splitline{Work In Progress (Simulation)}{ #splitline{' + flvString + ', #geq0 t, ' + tagString + '}{ KS: ' +str(prob_KS) +' #chi^{2} :'+str(prob_chi2)+ '}}'
+        pltr.extraText = '#splitline{Work In Progress (Simulation)}{ #splitline{' + flvString + ', #geq0 t, ' + tagString + '}{ KS: ' +str(prob_KS) +' #chi^{2} p-value:'+str(prob_chi2)+ '}}'
         pltr.tag = tag
         pltr.pullXTitle = 'Direct/Estimate'
-        pltr.printRatioTxt = False
+        # pltr.printRatioTxt = False
         pltr.saveImagePng = savePrefixmerged
-        pltr.plotLowerPad =False
+        # pltr.plotLowerPad =False
         pltr.ratioPlotter1D()
         pltr.printRatioTxt = False
