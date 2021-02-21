@@ -9,6 +9,7 @@ where <shape> is for example "JECUp". hadder.py can be used to prepare input fil
 --Each process given in the lists below must have a definition in "samples.py"
 --Check the set of cuts in "analyze.py"
 """
+from __future__ import print_function, division
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 parser = ArgumentParser(description="Hadd Files to pickled TH's ", formatter_class=ArgumentDefaultsHelpFormatter)#
@@ -19,12 +20,12 @@ parser.add_argument('-R', '--region', metavar='', default='PS', help='Region bei
 parser.add_argument('-Y', '--year', type=int, default=2017, metavar='', help='DAQ Year')
 parser.add_argument('-C', '--categorized', help='Is it categorised?', action='store_true')
 parser.add_argument('--isEM', nargs='+', choices=('E', 'M'), default=['E','M'], help='Lepton flavour')
-parser.add_argument('--nhott', nargs='+', choices=('0','1p'),
-                    default=['0'], help='HOT multiplicity')
-parser.add_argument('--nttag', nargs='+', choices=('0','1p'),
-                    default=['0'], help='Top tag multiplicity')
-parser.add_argument('--nWtag', nargs='+', choices=('0','1p'),
-                    default=['0'], help='W-tag multiplicity')
+parser.add_argument('--nhott', nargs='+', choices=('0','1p','0p'),
+                    default=['0p'], help='HOT multiplicity')
+parser.add_argument('--nttag', nargs='+', choices=('0','1p','0p'),
+                    default=['0p'], help='Top tag multiplicity')
+parser.add_argument('--nWtag', nargs='+', choices=('0','1p','0p'),
+                    default=['0p'], help='W-tag multiplicity')
 parser.add_argument('--nbtag', nargs='+', choices=('2p','3p','2','3', '4p'), default=['2p','3p'], help='B-tag Multiplicity')
 parser.add_argument('--btagType', metavar='', default='NJetsCSV_MultiLepCalc',
                     choices=('NJetsCSV_MultiLepCalc', 'NJetsCSVwithSF_MultiLepCalc', 'NJetsCSVwithSF_JetSubCalc', 'NJetsCSV_JetSubCalc'),
@@ -53,18 +54,25 @@ indir_parser.add_argument('-I', '--indir18y', metavar='',
                         '/pnfs/iihe/cms/store/user/nistylia/FWLJMET102X_1lep2018_Oct2019_4t_041220_step1hadds/nominal',
                     ],
                     help='Input directory 2018')
+analyzer_parser = parser.add_mutually_exclusive_group()
+analyzer_parser.add_argument('-doP','--doProduction',help='Do TRF production (given priority over -doI)', action='store_true')
+analyzer_parser.add_argument('-doI','--doImplementation',help='Do TRF implementation', action='store_true')
 argss = parser.parse_args()
 
-import os,sys,time,datetime,pickle,itertools,json
+import os,sys,time,datetime,pickle,itertools,yaml
 from ROOT import gROOT,TFile,TTree
 parent = os.path.dirname(os.getcwd())
 thisdir= os.path.dirname(os.getcwd()+'/')
-from analyze_trueTopRem import *
-# from utils import *
-extraMkdirOpt = ''
+if argss.doProduction:
+    from analyze_trueTopRem import *
+elif argss.doImplementation:
+    from analyze_trueTopRem_Implement import *
+    print("Using Implementation")
+else: sys.exit('No Analyzer provided')
+extraMkdirOpt = False
 year=argss.year
 if year==2017:
-    if argss.verbose > 1: print "Year in doHists.py:" + str(year)
+    if argss.verbose > 1: print("Year in doHists.py:" + str(year))
     if '/scratch/' in thisdir:
         sys.path.append(thisdir)
         from weights17 import *
@@ -73,11 +81,11 @@ if year==2017:
         sys.path.append(parent)
         from pkgWeights.weights17 import *
         from pkgSamples.samples17 import *
-        extraMkdirOpt = '-p '
+        extraMkdirOpt = True
     step1Dir = argss.indir17y
-    if argss.verbose > 1: print "Step1Dir in doHists.py: " + step1Dir
+    if argss.verbose > 1: print("Step1Dir in doHists.py: " + step1Dir)
 elif year==2018:
-    if argss.verbose > 1: print "Year in doHists.py:" + str(year)
+    if argss.verbose > 1: print("Year in doHists.py:" + str(year))
     if '/scratch/' in thisdir:
         sys.path.append(thisdir)
         from weights18 import *
@@ -86,9 +94,9 @@ elif year==2018:
         sys.path.append(parent)
         from pkgWeights.weights18 import *
         from pkgSamples.samples18 import *
-        extraMkdirOpt = '-p '
+        extraMkdirOpt = True
     step1Dir = argss.indir18y
-    if argss.verbose > 1: print "Step1Dir in doHists.py: " + step1Dir
+    if argss.verbose > 1: print("Step1Dir in doHists.py: " + step1Dir)
 
 gROOT.SetBatch(1)
 start_time = time.time()
@@ -118,7 +126,7 @@ bkgList = [
         # 'WW','WZ','ZZ',
         # 'QCDht200','QCDht300','QCDht500','QCDht700','QCDht1000','QCDht1500','QCDht2000',
           ]
-if year==2018: bkgList+= ['WJetsMG1200','WJetsMG2500']
+if year==2018: bkgList+= [] # ['WJetsMG1200','WJetsMG2500']
 elif year==2017:
     bkgList+= [
         # 'WJetsMG12001','WJetsMG12002','WJetsMG12003','WJetsMG25001','WJetsMG25002','WJetsMG25003','WJetsMG25004',,'Tbs'
@@ -156,13 +164,13 @@ runBkgs = True
 runSigs = True
 
 cutList = {'elPtCut':20,'muPtCut':20,'metCut':60,'mtCut':60,'jet1PtCut':0,'jet2PtCut':0,'jet3PtCut':0,'AK4HTCut':510,
-           'btagType': argss.btagType, 'year': argss.year, 'lumiStr': lumiStr}
+           'btagType': argss.btagType, 'year': argss.year, 'lumiStr': lumiStr, 'printProdPlots': False}
 cutString  = 'el'+str(int(cutList['elPtCut']))+'mu'+str(int(cutList['muPtCut']))
 cutString += '_MET'+str(int(cutList['metCut']))+'_MT'+str(cutList['mtCut'])
 cutString += '_1jet'+str(int(cutList['jet1PtCut']))+'_2jet'+str(int(cutList['jet2PtCut']))+str(int(cutList['jet3PtCut']))
 
 cTime=datetime.datetime.now()
-datestr='%i_%i_%i'%(cTime.year,cTime.month,cTime.day)
+datestr='%i_%i_%i' %(cTime.year,cTime.month,cTime.day)
 timestr='%i_%i0'% (cTime.hour, (cTime.minute//10)) # _%i_%i  ,cTime.minute,cTime.second
 if region=='TTCR': pfix='ttbar_'
 elif region=='WJCR': pfix='wjets_'
@@ -176,28 +184,45 @@ def readTree(rinFile):
     if not os.path.exists(rinFile):
         err_msg = "Error: File does not exist! Aborting ...", rinFile
         sys.exit(err_msg)
-        # os._exit(1)
     tFile = TFile(rinFile,'READ')
     tTree = tFile.Get('ljmet')
     return tFile, tTree
 
 
+def mkdirPath(outDirectory, pFix, cutStr, categoryDir, makeParent):
+    if makeParent: extraP = '-p'
+    else: extraP = ''
+    if len(outDirectory) > 1:
+        if not os.path.exists(outDirectory): os.system('mkdir ' + extraP + outDirectory)
+        outDirectory += pFix
+        if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+        outDirectory += '/' + cutStr
+        if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+        outDirectory += '/' + categoryDir
+        if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+    else:
+        outDirectory = os.getcwd()
+        outDirectory += '/' + pFix
+        if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+        outDirectory += '/' + cutStr
+        if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+        outDirectory += '/' + categoryDir
+        if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+    return outDirectory
+
+
 from multiprocessing import Pool, cpu_count
 from functools import partial
 if __name__ == '__main__':
-    with open("doHists_plotList.json", "r") as read_file:
-        plotList = json.load(read_file)
+    # with open("doHists_plotList.json", "r") as read_file:
+    #     plotList = json.load(read_file)
+    with open("plotList.yml") as read_file:
+        plotList, backup = yaml.safe_load_all(read_file)
 
-    if argss.verbose > 1:
-        print "PLOTTING:",iPlot
-        print "         LJMET Variable:",plotList[iPlot][0]
-        print "         X-AXIS TITLE  :",plotList[iPlot][2]
-        print "         BINNING USED  :",plotList[iPlot][1]
     catList = list(itertools.product(argss.isEM,argss.nhott,argss.nttag,argss.nttag,argss.nbtag,argss.njets))
-    nCats  = len(catList)
-    print 'nCats', nCats
+    nCats = len(catList)
+    print('nCats', )
     shapesFiles = ['jec','jer']
-
     tTreeData = {}
     tFileData = {}
     catInd = 1
@@ -205,28 +230,11 @@ if __name__ == '__main__':
         if not runData: break
         catDir = cat[0]+'_nHOT'+cat[1]+'_nT'+cat[2]+'_nW'+cat[3]+'_nB'+cat[4]+'_nJ'+cat[5]
         datahists = {}
-        if len(argss.outdir)>1:
-            outDir=argss.outdir
-            if not os.path.exists(outDir): os.system('mkdir '+extraMkdirOpt+outDir)
-            outDir+= pfix
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+cutString
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+catDir
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            if argss.verbose > 1: print(outDir)
-        else:
-            outDir = os.getcwd()
-            outDir+='/'+pfix
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+cutString
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+catDir
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
+        outDir = mkdirPath(argss.outdir, pfix, cutString, catDir, extraMkdirOpt)
         category = {'isEM':cat[0],'nhott':cat[1],'nttag':cat[2],'nWtag':cat[3],'nbtag':cat[4],'njets':cat[5]}
         for data in dataList:
             tFileData[data],tTreeData[data]=readTree(step1Dir+'/'+samples[data]+'_hadd.root')
-            datahists.update(analyze(tTreeData,data,'',cutList,False,iPlot,plotList[iPlot],category,region,isCategorized, weight, argss.verbose))
+            datahists.update(analyze(tTreeData,data,'',cutList,False,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
             if catInd==nCats:
                 del tFileData[data]
                 del tTreeData[data]
@@ -238,27 +246,11 @@ if __name__ == '__main__':
     catInd = 1
     # poool = Pool(3)
     for cat in catList:
-        print cat
         if not runBkgs: break
         catDir = cat[0]+'_nHOT'+cat[1]+'_nT'+cat[2]+'_nW'+cat[3]+'_nB'+cat[4]+'_nJ'+cat[5]
         bkghists  = {}
-        if len(argss.outdir)>1:
-            outDir=argss.outdir
-            if not os.path.exists(outDir): os.system('mkdir '+extraMkdirOpt+outDir)
-            outDir+= pfix
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+cutString
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+catDir
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-        else:
-            outDir = os.getcwd()
-            outDir+='/'+pfix
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+cutString
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+catDir
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
+        outDir = mkdirPath(argss.outdir, pfix, cutString, catDir, extraMkdirOpt)
+        print(outDir)
         category = {'isEM':cat[0],'nhott':cat[1],'nttag':cat[2],'nWtag':cat[3],'nbtag':cat[4],'njets':cat[5]}
         for bkg in bkgList:
             tFileBkg[bkg],tTreeBkg[bkg]=readTree(step1Dir+'/'+samples[bkg]+'_hadd.root')
@@ -267,7 +259,7 @@ if __name__ == '__main__':
                     for ud in ['Up','Down']:
                         tFileBkg[bkg+syst+ud],tTreeBkg[bkg+syst+ud]=readTree(step1Dir.replace('nominal',syst.upper()+ud.lower())+'/'+samples[bkg]+'_hadd.root')
 
-            bkghists.update(analyze(tTreeBkg,bkg,'',cutList,doAllSys,iPlot,plotList[iPlot],category,region,isCategorized, weight, argss.verbose))
+            bkghists.update(analyze(tTreeBkg,bkg,'',cutList,doAllSys,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
             # try:
             #     print len(tTreeBkg[bkg])
             #     ana_res = poool.apply(analyze, (tTreeBkg, bkg, '', cutList, doAllSys, iPlot, plotList[iPlot], category, region, isCategorized, weight,argss.verbose))
@@ -276,9 +268,8 @@ if __name__ == '__main__':
             #     print bkg, ' problem', e
 
             if 'TTJets' in bkg and len(ttFlvs)!=0:
-                for flv in ttFlvs: bkghists.update(analyze(tTreeBkg,bkg,flv,cutList,doAllSys,iPlot,plotList[iPlot],category,region,isCategorized, weight, argss.verbose))
+                for flv in ttFlvs: bkghists.update(analyze(tTreeBkg,bkg,flv,cutList,doAllSys,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
             if catInd==nCats:
-                print 'I am deleting everything'
                 del tFileBkg[bkg]
                 del tTreeBkg[bkg]
             if doAllSys and catInd==nCats:
@@ -292,7 +283,7 @@ if __name__ == '__main__':
                 for syst in shapesFiles:
                     for ud in ['Up','Down']:
                         tFileBkg[hdamp+syst+ud],tTreeBkg[hdamp+syst+ud]=None,None
-                bkghists.update(analyze(tTreeBkg,hdamp,'',cutList,False,iPlot,plotList[iPlot],category,region,isCategorized, weight, argss.verbose))
+                bkghists.update(analyze(tTreeBkg,hdamp,'',cutList,False,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
                 if catInd==nCats:
                     del tFileBkg[hdamp]
                     del tTreeBkg[hdamp]
@@ -302,11 +293,12 @@ if __name__ == '__main__':
                 for syst in shapesFiles:
                     for ud in ['Up','Down']:
                         tFileBkg[ue+syst+ud],tTreeBkg[ue+syst+ud]=None,None
-                bkghists.update(analyze(tTreeBkg,ue,'',cutList,False,iPlot,plotList[iPlot],category,region,isCategorized, weight, argss.verbose))
+                bkghists.update(analyze(tTreeBkg,ue,'',cutList,False,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
                 if catInd==nCats:
                     del tFileBkg[ue]
                     del tTreeBkg[ue]
         # poool.close()
+        print(outDir)
         pickle.dump(bkghists,open(outDir+'/bkghists_'+iPlot+'.p','wb'))
         catInd+=1
 
@@ -317,23 +309,7 @@ if __name__ == '__main__':
         if not runSigs: break
         catDir = cat[0]+'_nHOT'+cat[1]+'_nT'+cat[2]+'_nW'+cat[3]+'_nB'+cat[4]+'_nJ'+cat[5]
         sighists  = {}
-        if len(argss.outdir)>1:
-            outDir=argss.outdir
-            if not os.path.exists(outDir): os.system('mkdir '+extraMkdirOpt+outDir)
-            outDir+= pfix
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+cutString
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+catDir
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-        else:
-            outDir = os.getcwd()
-            outDir+='/'+pfix
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+cutString
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
-            outDir+='/'+catDir
-            if not os.path.exists(outDir): os.system('mkdir '+outDir)
+        outDir = mkdirPath(argss.outdir, pfix, cutString, catDir, extraMkdirOpt)
         category = {'isEM':cat[0],'nhott':cat[1],'nttag':cat[2],'nWtag':cat[3],'nbtag':cat[4],'njets':cat[5]}
         for sig in sigList:
             for decay in decays:
@@ -341,9 +317,9 @@ if __name__ == '__main__':
                 if doAllSys:
                     for syst in shapesFiles:
                         for ud in ['Up','Down']:
-                            if argss.verbose >0: print "        "+syst+ud
+                            if argss.verbose >0: print("        "+syst+ud)
                             tFileSig[sig+decay+syst+ud],tTreeSig[sig+decay+syst+ud]=readTree(step1Dir.replace('nominal',syst.upper()+ud.lower())+'/'+samples[sig+decay]+'_hadd.root')
-                sighists.update(analyze(tTreeSig,sig+decay,'',cutList,doAllSys,iPlot,plotList[iPlot],category,region,isCategorized, weight, argss.verbose))
+                sighists.update(analyze(tTreeSig,sig+decay,'',cutList,doAllSys,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
                 if catInd==nCats:
                     del tFileSig[sig+decay]
                     del tTreeSig[sig+decay]

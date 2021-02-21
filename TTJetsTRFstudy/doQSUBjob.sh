@@ -89,12 +89,14 @@ else
     whatToDo='-doI'
 fi
 
+echo "whatToDo "${whatToDo}
+
 if [[ -z "${doProd}" ]];then
     whatToDo2=''
 else
     whatToDo2='-doP'
 fi
-echo $whatToDo2
+echo "whatToDo2 "${whatToDo2}
 
 if [[ -z "${trfPATH}" ]];then
     trfPATH='IdealCaseTRFproduction/2017/J6/defaultTRFtables/MCeff_AllBins_J6_B2p_isL0p1.txt'
@@ -118,7 +120,8 @@ elif [[ ${YEAR} -eq 2017 ]];then
     cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgSamples/samples17.py .
 fi
 
-cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/doHists_plotList.json .
+#cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/doHists_plotList.json .
+cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/plotList.yml .
 if [[ "$REGION" == *"extractionProd"* ]];then
     echo "Using extraction trf production analysis script"
     cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem.py .
@@ -126,8 +129,8 @@ if [[ "$REGION" == *"extractionProd"* ]];then
 elif [[ "$REGION" == *"extractionImp"* ]];then
     echo "Using extraction Implementation analysis script"
     if [[ "${doTRUTH}" == *"true"* ]];then
-        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/eff_b2p.json .
-        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/eff_b3p.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defaultTRFtables/eff_B2p.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defaultTRFtables/eff_B3p.json .
         cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem_Implement.py .
         echo "Using MC weights true tops "
     else
