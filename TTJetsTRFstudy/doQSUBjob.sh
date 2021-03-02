@@ -129,8 +129,29 @@ if [[ "$REGION" == *"extractionProd"* ]];then
 elif [[ "$REGION" == *"extractionImp"* ]];then
     echo "Using extraction Implementation analysis script"
     if [[ "${doTRUTH}" == *"true"* ]];then
-        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defaultTRFtables/eff_B2p.json .
-        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defaultTRFtables/eff_B3p.json .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defaultTRFtables/eff_B2p.json .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defaultTRFtables/eff_B3p.json .
+
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixator_vlq_KeptJetsPt2021_2_21_17_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtables2Dout/eff_B2p.json .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixator_vlq_KeptJetsPt2021_2_21_17_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtables2Dout/eff_B3p.json .
+#
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixator_vlq_KeptJetsPt2021_2_21_17_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/eff_B2p.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixator_vlq_KeptJetsPt2021_2_21_17_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/eff_B3p.json .
+
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/1valTRF/eff_B2p.json .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/1valTRF/eff_B3p.json .
+
+
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2ptt1b.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2ptt2b.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pttbb.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pttcc.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pttjj.json .
+
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pBflav_tt.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pCflav_tt.json .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pLiFlav_tt.json .
+
         cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem_Implement.py .
         echo "Using MC weights true tops "
     else
@@ -171,31 +192,3 @@ python -u doHists.py ${INDIR} \
     ${whatToDo}\
     ${whatToDo2}\
     -v
-
-
-#        cp ${SKIMJOBDIR}/createAnalyzeTRFImplementationConfig.py createAnalyzeConfig.py
-#        if [[ "${nBTAG}" == "2" ]]; then
-#            if [[ "$REGION" == *"Add1"* ]];then
-#                nBTAGnew="3"
-#            elif [[ "$REGION" == *"Add2p"* ]];then
-#                nBTAGnew="4p"
-#            else
-#                nBTAGnew=${nBTAG}
-#            fi
-#        else
-#            nBTAGnew=${nBTAG}
-#        fi
-#        if [[ "$REGION" == *"_corA"* ]];then
-#            drCorrect=${SKIMJOBDIR}/
-#        elif [[ "$REGION" == *"_corB"* ]];then
-#            drCorrect=${SKIMJOBDIR}/
-#        elif [[ "$REGION" == *"_corC"* ]];then
-#            drCorrect=${SKIMJOBDIR}/
-#        elif [[ "$REGION" == *"_corD"* ]];then
-#            drCorrect=${SKIMJOBDIR}/
-#        else
-#            echo "error hehehehe no event correction"
-#        fi
-
-#        echo createAnalyzeConfig.py  analyze.py ${jetPtTRF} ${drCorrect}
-#        python createAnalyzeConfig.py  analyze.py  ${jetPtTRF} ${drCorrect}

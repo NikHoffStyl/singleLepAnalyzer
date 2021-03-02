@@ -27,7 +27,7 @@ def formatUpperHist(histogramList):
         elif 'Jet3rdLeadPt' in disc:histogram.GetXaxis().SetTitle("p_{T}^{3rd additional-jet} [GeV]")
         elif 'Jet4thLeadPt' in disc: histogram.GetXaxis().SetTitle("p_{T}^{4th additional-jet} [GeV]")
 
-        if blind == True:
+        if blind:
             histogram.GetXaxis().SetLabelSize(0.045)
             histogram.GetXaxis().SetTitleSize(0.055)
             histogram.GetYaxis().SetLabelSize(0.045)
@@ -67,7 +67,7 @@ def formatMidHist(histogramList):
         else:
             histogram.GetXaxis().SetNdivisions(506)
 
-        if blind == True:
+        if blind:
             histogram.GetXaxis().SetLabelSize(0.045)
             histogram.GetXaxis().SetTitleSize(0.055)
             histogram.GetYaxis().SetLabelSize(0.045)
@@ -125,17 +125,19 @@ def formatLowerHist(histogramList,disc, tagl, nbinx):
         miny = 0.6 * min(minList)
         histogram.SetMinimum(miny)
 
+        mList = [histogram.GetMaximum()]
+        for nh, hist in enumerate(histogramList):
+            if nh == 0: continue
+            mList.append(hist.GetMaximum())
+        maxy = 1.2 * max(mList)
+        histogram.SetMaximum(max(0.055, maxy))
         if doRealPull:
             histogram.GetYaxis().SetRangeUser(min(-2.99, 0.8 * histogram.GetBinContent(histogram.GetMaximumBin())),
                                               max(2.99, 1.2 * histogram.GetBinContent(histogram.GetMaximumBin())))
         else:
-            histogram.GetYaxis().SetRangeUser(miny, 0.05)  # 0.45,1.55)
+            histogram.GetYaxis().SetRangeUser(miny, maxy)  # 0.45,1.55)
 
-        mList =[histogram.GetMaximum()]
-        for nh,hist in enumerate(histogramList):
-            if nh ==0: continue
-            mList.append(hist.GetMaximum())
-        histogram.SetMaximum(max(0.055, 1.2 * max(mList)))
+
 
 
 def DrawOverflow(h):
@@ -151,7 +153,7 @@ def DrawOverflow(h):
     htmp.Sumw2()
     # /fill the new histogram including the overflows
     for i in range(0, nx+1):
-        print h.GetBinContent(i)
+        print(h.GetBinContent(i))
         htmp.SetBinContent(htmp.FindBin(htmp.GetBinCenter(i)),h.GetBinContent(i))
         htmp.SetBinError(htmp.FindBin(htmp.GetBinCenter(i)),h.GetBinError(i))
 
@@ -160,7 +162,6 @@ def DrawOverflow(h):
     # Restore the number of entries
     htmp.SetEntries(h.GetEffectiveEntries())
     return htmp
-
 
 
 def Average(lst):

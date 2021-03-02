@@ -69,6 +69,10 @@ class Plotter(object):
         self.hDrawn               = []    # [ROOT.TH1] here for some future additions
         self.hDrawnLegEntry       = []    # [string] here for some future additions
         self.hDrawText            = ''
+        self.h1_xAxisLabels       = {}    # [string] for posibilty of adding labels instaed of numbers
+
+    def reset(self):
+        self.__init__()
 
     def ratioPlotter1D(self):
         """
@@ -124,7 +128,8 @@ class Plotter(object):
         uPad.cd()
 
         if self.h2 is not None:
-            formatUpperHist([self.h2])
+            if self.h1 is not None: formatUpperHist([self.h2, self.h1])
+            else: formatUpperHist([self.h2])
             if self.plotLowerPad: histTitleAndLabelSettings(self.h2, 0)  # corrections
             else: histTitleAndLabelSettings(self.h2, 1)
             self.h2.Draw("hist" + self.hDrawText)
@@ -204,60 +209,48 @@ class Plotter(object):
             pull.Divide(self.h1, self.h2, 1, 1, "B")
 
             if self.printRatioTxt:
-                # pullContentList = []
-                # pullErrorList = []
-                # pullXAxisList = []
-                # # listOfTuples = []
-                # with open(self.ratioFileName, 'w') as ratioFile:
-                #     print("\n      WRITTING TO MCeff " + self.ratioFileName + " \n")
-                #     ratioFile.write("\n MCstack \n")
-                #     pullXAxisLowEdgeLists = []
-                #     for bini in range(1, pull.GetNbinsX() + 1):
-                #         p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
-                #         p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
-                #         p_binCont = pull.GetBinContent(bini)
-                #         pullContentList.append(p_binCont)
-                #         p_binError = pull.GetBinError(bini)
-                #         pullErrorList.append(p_binError)
-                #         pullXAxisList.append(p_lowEdge + ((p_highEdge - p_lowEdge) / 2))
-                #         pullXAxisLowEdgeLists.append(p_lowEdge)
-                #         if bini == 1:
-                #             sfbin = '        if  jetPT < ' + str(p_highEdge) + ' : \n'
-                #         elif bini == pull.GetNbinsX():
-                #             sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' : \n'
-                #         else:
-                #             sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' and jetPT < ' + str(
-                #                 p_highEdge) + ' : \n'
-                #         if self.tag[3] == '2p':
-                #             sfbin += '            effJet.append(' + str(p_binCont) + ') \n'
-                #             sfbin += '            effJet_error.append(' + str(p_binError) + ') \n'
-                #         else:
-                #             sfbin += '            effJet_b3p.append(' + str(p_binCont) + ') \n'
-                #             sfbin += '            effJet_error_b3p.append(' + str(p_binError) + ') \n'
-                #         ratioFile.write(sfbin)
-                #         # listOfTuples.append([(p_lowEdge, p_highEdge),(0,5),(p_binCont, p_binError)])
-                #     ratioFile.write('x =' + str(pullXAxisList) + '\n')
-                #     ratioFile.write('y =' + str(pullContentList) + '\n')
-                #     ratioFile.write('dy =' + str(pullErrorList) + '\n')
-                #     ratioFile.write('lowx = ' + str(pullXAxisLowEdgeLists) + '\n')
-                #     # ratioFile.write('listsOfTuples = '+ str(listOfTuples)+'\n')
-                #     del pullXAxisList[:]
-                #     del pullContentList[:]
-                #     del pullErrorList[:]
-                #     # del listOfTuples[:]
-                # with open(self.ratioJSONfileName, "w") as write_file:
-                #     singleDiction = {}
-                #     for bini in range(1, pull.GetNbinsX() + 1):
-                #         p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
-                #         p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
-                #         p_binCont = pull.GetBinContent(bini)
-                #         p_binError = pull.GetBinError(bini)
-                #         pbinInfo = str((p_lowEdge, p_highEdge))
-                #         p_binInfo = (p_binCont, p_binError)
-                #         singleDiction.update({pbinInfo: p_binInfo})
-                #     json.dump(singleDiction, write_file, indent=2)
-                #     singleDiction.clear()
-                dumpHistToJSON(self.ratioJSONfileName, pull)
+                with open(self.ratioFileName, 'w') as ratioFile:
+                    pullContentList = []
+                    pullErrorList = []
+                    pullXAxisList = []
+                    # listOfTuples = []
+                    print("\n      WRITTING TO MCeff " + self.ratioFileName + " \n")
+                    ratioFile.write("\n MCstack \n")
+                    pullXAxisLowEdgeLists = []
+                    for bini in range(1, pull.GetNbinsX() + 1):
+                        p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
+                        p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
+                        p_binCont = pull.GetBinContent(bini)
+                        pullContentList.append(p_binCont)
+                        p_binError = pull.GetBinError(bini)
+                        pullErrorList.append(p_binError)
+                        pullXAxisList.append(p_lowEdge + ((p_highEdge - p_lowEdge) / 2))
+                        pullXAxisLowEdgeLists.append(p_lowEdge)
+                        if bini == 1:
+                            sfbin = '        if  jetPT < ' + str(p_highEdge) + ' : \n'
+                        elif bini == pull.GetNbinsX():
+                            sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' : \n'
+                        else:
+                            sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' and jetPT < ' + str(
+                                p_highEdge) + ' : \n'
+                        if self.tag[3] == '2p':
+                            sfbin += '            effJet.append(' + str(p_binCont) + ') \n'
+                            sfbin += '            effJet_error.append(' + str(p_binError) + ') \n'
+                        else:
+                            sfbin += '            effJet_b3p.append(' + str(p_binCont) + ') \n'
+                            sfbin += '            effJet_error_b3p.append(' + str(p_binError) + ') \n'
+                        ratioFile.write(sfbin)
+                        # listOfTuples.append([(p_lowEdge, p_highEdge),(0,5),(p_binCont, p_binError)])
+                    ratioFile.write('x =' + str(pullXAxisList) + '\n')
+                    ratioFile.write('y =' + str(pullContentList) + '\n')
+                    ratioFile.write('dy =' + str(pullErrorList) + '\n')
+                    ratioFile.write('lowx = ' + str(pullXAxisLowEdgeLists) + '\n')
+                    # ratioFile.write('listsOfTuples = '+ str(listOfTuples)+'\n')
+                    del pullXAxisList[:]
+                    del pullContentList[:]
+                    del pullErrorList[:]
+                    # del listOfTuples[:]
+                dumpHistToJSON(self.ratioJSONfileName, pull, None)
 
             for binNo in range(1, self.h2.GetNbinsX() + 1):
                 binLbl = binNo - 1
@@ -302,8 +295,11 @@ class Plotter(object):
                 if self.h2.GetBinContent(binNo) != 0:
                     if self.err2 is None: self.err2 = self.err1
                     if self.err1 is None: self.err1 = self.err2
-                    pullUncBandNorm.SetPointEYhigh(binNo - 1, math.sqrt(((self.err1.GetErrorYhigh(binNo - 1) * (self.h1.GetBinContent(binNo) / ((self.h2.GetBinContent(binNo)) ** 2))) ** 2) + ((self.err2.GetErrorYhigh(binNo - 1) * (1 / self.h2.GetBinContent(binNo))) ** 2)))
-                    pullUncBandNorm.SetPointEYlow(binNo - 1, math.sqrt(((self.err1.GetErrorYhigh(binNo - 1) * (self.h1.GetBinContent(binNo) / ((self.h2.GetBinContent(binNo)) ** 2))) ** 2) + ((self.err2.GetErrorYhigh(binNo - 1) * (1 / self.h2.GetBinContent(binNo))) ** 2)))
+                    errY = (max(max(self.err1.GetErrorYhigh(binNo - 1), zero) * (max(self.h1.GetBinContent(binNo), zero) / ((max(self.h2.GetBinContent(binNo), zero)) ** 2)) , 0.001) ** 2) + (max(max(self.err2.GetErrorYhigh(binNo - 1),zero) * (max(1 / self.h2.GetBinContent(binNo), zero)), 0.001) ** 2)
+                    # print(errY)
+                    errY = math.sqrt(min(errY, 0.03)) #
+                    pullUncBandNorm.SetPointEYhigh(binNo - 1, errY)
+                    pullUncBandNorm.SetPointEYlow(binNo - 1, errY)
             pullUncBandNorm.SetFillStyle(3001)
             pullUncBandNorm.SetFillColor(1)
             pullUncBandNorm.SetLineColor(1)
@@ -387,6 +383,7 @@ class Plotter(object):
         CMS_lumi.relExtraDY   = 0
         CMS_lumi.cmsTextSize  = 0.45
         CMS_lumi.lumiTextSize = 0.35
+        CMS_lumi.lumi_13TeV   = self.lumi_13TeV
         CMS_lumi.CMS_lumi(uPad, self.iPeriod, self.iPos)
         uPad.Update()
         uPad.RedrawAxis()
@@ -443,10 +440,10 @@ def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histName
     :param _doBCTruth:
     :return:
     """
-    if _procList is None:
-        _procList = []
-    _histNameList = []
+    if _inputFiles is None: raise FileNotFoundError('input file required but not provided')
+    if _procList is None: raise ValueError('_procList required but not provide')
 
+    _histNameList = []
     totProcMerged = 0.
     for procIndx, proc in enumerate(_procList):
         del _histNameList[:]
@@ -511,31 +508,64 @@ def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histName
         totProcMergedSub = 0.
 
 
-# def getHistFromFile(fileName=None, histName='', verbose=False):
-#     histOutTemp = fileName.Get(histName)
-#     if histOut is not None:
-#         histOut = histOutTemp.Clone(histOutTemp.GetName() + '_new')
-#         return histOut, True
-#     else:
-#         if verbose: print("There is no " + histName+ " in input file!!! Skipping it.....")
-#         pass
-#     return None, False
+def dumpHistToJSON(ratioJSONfileName=None, histogrm=None, addLabelList=None):
+    if ratioJSONfileName is None: raise FileNotFoundError('JSON ratio file name not provided!')
+    if histogrm is None:  raise ValueError('Histogram not provided')
 
-def dumpHistToJSON(ratioJSONfileName=None, hist=None):
-    if ratioJSONfileName is None: return False
-    if hist is None:  return False
     with open(ratioJSONfileName, "w") as write_file:
         singleDiction = {}
-        for bini in range(1, hist.GetNbinsX() + 1):
-            p_lowEdge = hist.GetXaxis().GetBinLowEdge(bini)
-            p_highEdge = (p_lowEdge + hist.GetXaxis().GetBinWidth(bini))
-            p_binCont = hist.GetBinContent(bini)
-            p_binError = hist.GetBinError(bini)
-            pbinInfo = str((p_lowEdge, p_highEdge))
+        for bini in range(1, histogrm.GetNbinsX() + 1):
+            p_lowEdge = histogrm.GetXaxis().GetBinLowEdge(bini)
+            p_highEdge = (p_lowEdge + histogrm.GetXaxis().GetBinWidth(bini))
+            p_binCont = histogrm.GetBinContent(bini)
+            p_binError = histogrm.GetBinError(bini)
+
+            if addLabelList is not None: pbinInfo = str((p_lowEdge, p_highEdge, addLabelList[p_lowEdge]))
+            else: pbinInfo = str((p_lowEdge, p_highEdge))
             p_binInfo = (p_binCont, p_binError)
             singleDiction.update({pbinInfo: p_binInfo})
+
         json.dump(singleDiction, write_file, indent=2)
+        print('Created: '+ ratioJSONfileName)
         singleDiction.clear()
+
+    return True
+
+
+def dumpHistsIntegralsToJSON(ratioJSONfileName=None, histogrms=None, addLabelList=None, preStr='', postStr=''):
+    if ratioJSONfileName is None: raise FileNotFoundError('JSON ratio file name not provided!')
+    if histogrms is None:  raise ValueError('Histograms were required but not provided!')
+    if addLabelList is None: raise ValueError('Labels are required!')
+
+    histMerged = 0
+    histTotal = histogrms[preStr+'tt'+postStr].Integral()
+    with open(ratioJSONfileName, "w") as write_file:
+        singleDiction = {}
+        for histKey in addLabelList:
+            histLabel = addLabelList[histKey]
+            histIntegral = histogrms[preStr+histKey+postStr].Integral()
+            histMerged += histIntegral
+            singleDiction.update({histLabel: histIntegral})
+        if abs(histTotal - histMerged) > zero: raise ValueError('Integrals of histograms do not add up!')
+        json.dump(singleDiction, write_file, indent=2)
+        print('Created: '+ ratioJSONfileName)
+        singleDiction.clear()
+
+    return True
+
+
+def addXaxisLabels(histogram=None, xlabelsDiction=None):
+    """
+
+    :param histogram:
+    :param xlabelsDiction:
+    :return:
+    """
+    if histogram is None: return False
+    if xlabelsDiction is None: return  False
+    for xlabel in xlabelsDiction:
+        histogram.SetBinLabel(xlabelsDiction[xlabelsDiction], xlabel)
+
     return True
 
 
@@ -555,3 +585,13 @@ def update(d, u):
         else:
             d[k] = v
     return d
+
+# def getHistFromFile(fileName=None, histName='', verbose=False):
+#     histOutTemp = fileName.Get(histName)
+#     if histOut is not None:
+#         histOut = histOutTemp.Clone(histOutTemp.GetName() + '_new')
+#         return histOut, True
+#     else:
+#         if verbose: print("There is no " + histName+ " in input file!!! Skipping it.....")
+#         pass
+#     return None, False

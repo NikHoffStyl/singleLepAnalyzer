@@ -1,4 +1,4 @@
-# Obtaining a Data-Driven Estimate Using TRF-mathod
+# Obtaining a Data-Driven Estimate Using TRF-method
 
  Take hadded files from step1 or step2 and run through events and jets; which allows to select and split jets in subgroups
  which are used to obtain the TRF.
@@ -32,7 +32,9 @@
        ```
      * Example Picture: \
        ![plot](.readme_pics/JetallPt_Feb9_17JetallPtJ6B2sv1stat0p1.png)
-       
+     * A better version of this can also be found called: [`plotTRFjsonFiles.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/plotTRFjsonFiles.py). 
+     Use `--help` or `-h` to see what options are available for this script.
+        
        
 ## Implementation Steps
  * [`analyze_trueTopRem_Implement.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/analyze_trueTopRem_Implement.py) is used to produce histograms in the ideal case. It saves the same histograms as 
@@ -44,9 +46,16 @@
  * [`doTemplates_TTJetsImplement.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy) used to group processes like before and scale ttbb and tt-other
     * To Run its the the same as for `plotTemplates_TRFversion.py` 
  
- * [`plotTemplates_CompareEstimate.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/plotTemplate_CompareEstimates.py)  is a simple plotter for 
+ * [`plotTemplates_CompareEstimate.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/plotTemplate_CompareEstimates.py)  is a simple plotter for making a quick comparison between direct and estimate plots.
+ * [`plotTemlates_1DVariable.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/plotTemlates_1DVariable.py) is plotter that attempts to do various sorts of plots , see help for the many-many options available.
  
  
+ ## Additional scripts
+  * [`makePieOfRegion.py`](https://github.com/NikHoffStyl/singleLepAnalyzer/blob/fourtops/TTJetsTRFstudy/makePieOfRegion.py) makes pie charts from small json files (note: matplotlib is needed). 
+  This so that it is easier to save a short file with yields in regions of interest. There are many ways one can create the json files this is left up to the user.
+  
+  * Example plot for motivation: \  
+     ![plot2](.readme_pics/examplePie.png)
 ## Side comments:
   * The scripts in this directory or imported from the previous directory are mostly compatible as-is to be used for 
   python releases 2.7 to 3.6(+) ; and it has been roughly tested a few root releases , where the latest working test was 6.20.00 ROOT release

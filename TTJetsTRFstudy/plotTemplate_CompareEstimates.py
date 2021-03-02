@@ -7,13 +7,13 @@ parser = ArgumentParser(description="Custom 4T Plotter ", formatter_class=Argume
 parser.add_argument('--outdir', help='The directory to which we want the output of ')
 parser.add_argument('-v', '--verbose', action='count', default=0, help='Print more info')
 parser.add_argument('-n', '--variableName', metavar='', default='KeptLeadJetEta', help='Variable Name')
-parser.add_argument('-Pa', '--preFixPlotA', metavar='', default='B3_', help='Pre Name of plot 1')
-parser.add_argument('-Pb', '--preFixPlotB', metavar='', default='B2_EstB2To3', help='Name of plot')
+parser.add_argument('-Pa', '--preFixPlotA', metavar='', default='3', help='Pre Name of plot 1')
+parser.add_argument('-Pb', '--preFixPlotB', metavar='', default='EstB2To3', help='Name of plot')
 parser.add_argument('-Y', '--year', type=int, default=2017, metavar='', help='DAQ Year')
 parser.add_argument('-S', '--stat', type=int, default=0.3, metavar='', help='Value of Max Statistical Uncertainty of Bins')
-parser.add_argument( '--statIO', metavar='', default='in', help='Which Histogram to consider stat rebinning upper or ratio?')
+parser.add_argument('--statIO', metavar='', default='in', help='Which Histogram to consider stat rebinning upper or ratio?')
 parser.add_argument('-C', '--categorized', help='Is it categorised?', action='store_true')
-parser.add_argument('--isEM', nargs='+', choices=('E', 'M'), default=['E','M'], help='Lepton flavour')
+parser.add_argument('--isEM', nargs='+', choices=('E', 'M', 'L'), default=['L'], help='Lepton flavour')
 parser.add_argument('--nhott', nargs='+', choices=('0','1p','0p'),
                     default=None, help='HOT multiplicity')
 parser.add_argument('--nttag', nargs='+', choices=('0','1p','0p'),
@@ -42,7 +42,7 @@ import os, sys, time, math, itertools
 import pkgCustomPlotTools.lib_Plotters  as libPlot
 parent = os.path.dirname(os.getcwd())
 sys.path.append(parent)
-import ROOT as rt
+import ROOT
 from modSyst import *
 from utils import *
 import json
@@ -57,7 +57,7 @@ elif argss.year==2018:
     year = 'R18'
 print("Run-Year: " + year)
 
-rt.gROOT.SetBatch(1)
+ROOT.gROOT.SetBatch(1)
 start_time = time.time()
 pltr= libPlot.Plotter()
 statVal = argss.stat
@@ -84,10 +84,10 @@ isRebinned = '' # '_rebinned_stat1p1' # 1p1 0p3' #post for ROOT file names
 saveKey = ''  # tag for plot names
 ttProcList = ['ttnobb','ttbb']
 bkgProcList = ttProcList#+['top','ewk','qcd']
-bkgHistColors = {'tt2b':rt.kRed+3,'tt1b':rt.kRed-3,'ttbj':rt.kRed+3,'ttbb':rt.kRed,'ttcc':rt.kRed-5,'ttjj':rt.kRed-7,'ttnobb':rt.kRed-7,'top':rt.kBlue,'ewk':rt.kMagenta-2,'qcd':rt.kOrange+5,'ttbar':rt.kRed} #4T
-genflavColors = {'Bflav':rt.kBlue-7, 'topBflav': rt.kBlue, 'Cflav':rt.kAzure+2, 'LiFlav':rt.kCyan, 'Bin4_':rt.kBlue-7, 'Bin3_': rt.kBlue, 'Bin2_':rt.kAzure+2, 'Bin1_':rt.kCyan}
+bkgHistColors = {'tt2b': ROOT.kRed + 3, 'tt1b': ROOT.kRed - 3, 'ttbj': ROOT.kRed + 3, 'ttbb':ROOT.kRed, 'ttcc': ROOT.kRed - 5, 'ttjj': ROOT.kRed - 7, 'ttnobb': ROOT.kRed - 7, 'top':ROOT.kBlue, 'ewk': ROOT.kMagenta - 2, 'qcd': ROOT.kOrange + 5, 'ttbar':ROOT.kRed} #4T
+genflavColors = {'Bflav': ROOT.kBlue - 7, 'topBflav': ROOT.kBlue, 'Cflav': ROOT.kAzure + 2, 'LiFlav':ROOT.kCyan, 'Bin4_': ROOT.kBlue - 7, 'Bin3_': ROOT.kBlue, 'Bin2_': ROOT.kAzure + 2, 'Bin1_':ROOT.kCyan}
 genflavLegend = {'Bflav':'b from g', 'topBflav': 'b from t', 'Cflav':'c-jet', 'LiFlav':'u/d/s-jet','Bin4_':'c#geq1, b>0', 'Bin3_': 'c>1, b#geq0', 'Bin2_':'c=1, b=0', 'Bin1_':'c=0, b=0'}
-mergedHistColors = {'DataDriven': rt.kRed-3, }
+mergedHistColors = {'DataDriven': ROOT.kRed - 3, }
 systematicList = ['pileup','prefire','muRFcorrd','muR','muF','isr','fsr']
 yLog  = argss.yLog
 blind = argss.blind
@@ -105,10 +105,9 @@ zero = 1E-12
 
 tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
 if not os.path.exists(templateDir+tempsig):
-    print("ERROR: File does not exits: "+templateDir+tempsig)
-    os._exit(1)
+    sys.exit("ERROR: File does not exits: "+templateDir+tempsig)
 print("READING: "+templateDir+tempsig)
-inputFile = rt.TFile(templateDir+tempsig)
+inputFile = ROOT.TFile(templateDir + tempsig)
 
 tagListTemp = list(itertools.product(nhottlist,nttaglist,nWtaglist,nbtaglist,njetslist))
 tagList = []
@@ -133,8 +132,8 @@ for tag in tagList:
 # ---------------------------------------------------------------------------------------------------------------
 
 
-def getNormUnc(hist,ibin,modelingUnc):
-    contentsquared = hist.GetBinContent(ibin)**2
+def getNormUnc(hist,ithBin,modelingUnc):
+    contentsquared = hist.GetBinContent(ithBin)**2
     error = corrdSys*corrdSys*contentsquared  #correlated uncertainties
     error += modelingUnc*modelingUnc*contentsquared #background modeling uncertainty from CRs
     return error
@@ -145,19 +144,16 @@ def getNormUnc(hist,ibin,modelingUnc):
 # ---------------------------------------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    systHistsMerged = {} # Todo : check if needs deleting
-    systHistsMerged2 = {} # Todo : check if needs deleting
-
     bkghistsmerged = {}
     bkghistsmergedUp = {}
     bkghistsmergedDn = {}
     bkghistsmerged2 = {}
     dataDrivenTtBkgTemp = {}
 
-    hMC2ttjetsMergedflav = {}  # Todo : check if needs deleting
-    hMCttjetsMergedflav = {}  # Todo : check if needs deleting
-    hMC2ttjetsMergedbcut = {}  # Todo : check if needs deleting
-    hMCttjetsMergedbcut = {}  # Todo : check if needs deleting
+    hMC2ttjetsMergedflav = {}  # Todo : Possibly add possibility of drawing extra sub histograms for stack
+    hMCttjetsMergedflav = {}  # Todo : Possibly add possibility of drawing extra sub histograms for stack
+    hMC2ttjetsMergedbcut = {}  # Todo : Possibly add possibility of drawing extra sub histograms for stack
+    hMCttjetsMergedbcut = {}  # Todo : Possibly add possibility of drawing extra sub histograms for stack
     totBkgTemp1 = {}  # Todo : check if needs deleting
     totBkgTemp2 = {}  # Todo : check if needs deleting
     bkgHTgerr1bcut = {}  # Todo : check if needs deleting
@@ -179,41 +175,27 @@ if __name__ == '__main__':
         userdefineBtag = '3'
         flvString += '#mu/e+jets'
         if tag[0] != '0p':
-            if 'p' in tag[0]:
-                tagString2 += '#geq' + tag[0][:-1] + ' resolved t'
-            else:
-                tagString2 += tag[0] + ' resolved t'
+            if 'p' in tag[0]: tagString2 += '#geq' + tag[0][:-1] + ' resolved t'
+            else: tagString2 += tag[0] + ' resolved t'
         if tag[1] != '0p':
-            if 'p' in tag[1]:
-                tagString += '#geq' + tag[1][:-1] + ' t, '
-            else:
-                tagString += tag[1] + ' t, '
+            if 'p' in tag[1]: tagString += '#geq' + tag[1][:-1] + ' t, '
+            else: tagString += tag[1] + ' t, '
         if tag[2] != '0p':
-            if 'p' in tag[2]:
-                tagString += '#geq' + tag[2][:-1] + ' W, '
-            else:
-                tagString += tag[2] + ' W, '
+            if 'p' in tag[2]: tagString += '#geq' + tag[2][:-1] + ' W, '
+            else: tagString += tag[2] + ' W, '
         if tag[3] != '0p':
-            if 'p' in tag[3]:
-                tagString += '#geq' + userdefineBtag + ' b, '
-            else:
-                tagString += userdefineBtag + ' b, '
+            if 'p' in tag[3]: tagString += '#geq' + userdefineBtag + ' b, '
+            else: tagString += userdefineBtag + ' b, '
         if tag[4] != '0p':
-            if 'p' in tag[4]:
-                tagString += '#geq' + tag[4][:-1] + ' j'
-            elif 'a' in tag[4]:
-                tagString += '(' + tag[4][:-2] + '+' + tag[4][2:] + ') j'
-            else:
-                tagString += tag[4] + ' j'
+            if 'p' in tag[4]: tagString += '#geq' + tag[4][:-1] + ' j'
+            elif 'a' in tag[4]: tagString += '(' + tag[4][:-2] + '+' + tag[4][2:] + ') j'
+            else: tagString += tag[4] + ' j'
         if tagString.endswith(', '): tagString = tagString[:-2]
 
-        # preFixPlotA = 'B3_'
         preFixPlotA = argss.preFixPlotA
-        # iPlot ='KeptLeadJetEta'
         iPlot = argss.variableName
         histPrefixE = iPlot+ '_' + lumiInTemplates + 'fb_isE_' + tagStr+ '__'
         if argss.verbose > 0 : print(histPrefixE)
-        # preFixPlotB = 'B2_EstB2To3'
         preFixPlotB = argss.preFixPlotB
         # Get histograms from root file and merge e and mu channel histograms
         histNameTemp = histPrefixE+ 'chTTjj'+'_Denr'
@@ -221,7 +203,9 @@ if __name__ == '__main__':
         libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmergedUp, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp, _tS=tagStr, _preStr=preFixPlotB+'Up_')
         libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp, _tS=tagStr, _preStr=preFixPlotB+'_')
         libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmergedDn, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp, _tS=tagStr, _preStr=preFixPlotB+'Dn_')
-        libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged2, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTemp,_tS=tagStr, _preStr=preFixPlotA)
+        tagStrA = tagStr.replace('_nB'+tag[3], '_nB'+preFixPlotA)
+        histNameTempA = histNameTemp.replace('_nB' + tag[3], '_nB' + preFixPlotA)
+        libPlot.mergeEMhistogramsFromFile(_hOut=bkghistsmerged2, _inputFiles=inputFile,_procList=bkgProcList, _histNameTemp=histNameTempA,_tS=tagStrA)
 
         # --------------------------------------------------------------------------------------------------------------
         # Create TTJets(ttbb+ttother) Data Driven Histograms
@@ -237,14 +221,15 @@ if __name__ == '__main__':
         hMCttjetsMergedDn.Add(bkghistsmergedDn[preFixPlotB+'Dn_ttnobb' + 'isL' + tagStr])
         hMCttjetsMergedDn.SetDirectory(0)
 
-        if hMCttjetsMerged.GetBinContent(1) == hMCttjetsMergedUp.GetBinContent(1):
+        if abs(hMCttjetsMerged.Integral() - hMCttjetsMergedUp.Integral()) < zero:
             sys.exit('ERROR: Nominal tt-inclussive is equal to Up-tt-inclussive')
-        elif hMCttjetsMerged.GetBinContent(1) == hMCttjetsMergedDn.GetBinContent(1):
+        elif abs(hMCttjetsMerged.Integral() - hMCttjetsMergedDn.Integral()) <zero:
             sys.exit('ERROR: Nominal tt-inclussive is equal to Down-tt-inclussive')
 
         # Create TTJets(ttbb+ttother) Direct MC Histograms
-        hMC2ttjetsMerged = bkghistsmerged2[preFixPlotA+'ttbb' + 'isL' + tagStr].Clone()
-        hMC2ttjetsMerged.Add(bkghistsmerged2[preFixPlotA+'ttnobb' + 'isL' + tagStr])
+        if tagStrA == tagStr: sys.exit("Problem with these strings")
+        hMC2ttjetsMerged = bkghistsmerged2['ttbb' + 'isL' + tagStrA].Clone()
+        hMC2ttjetsMerged.Add(bkghistsmerged2['ttnobb' + 'isL' + tagStrA])
         hMC2ttjetsMerged.SetDirectory(0)
 
         prob_KS = hMCttjetsMerged.KolmogorovTest(hMC2ttjetsMerged)
@@ -259,8 +244,7 @@ if __name__ == '__main__':
             # print("  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof)
             print('*' * 80, '\n', '/' * 80)
 
-        hMCttjetsMerged, hMC2ttjetsMerged, xbinss = StatRebinHist(hMCttjetsMerged, hMC2ttjetsMerged, statVal, statType,
-                                                                  onebin=False)
+        hMCttjetsMerged, hMC2ttjetsMerged, xbinss = StatRebinHist(hMCttjetsMerged, hMC2ttjetsMerged, statVal, statType, onebin=False)
 
         hMCttjetsMergedUp = hMCttjetsMergedUp.Rebin(len(xbinss) - 1, hMCttjetsMergedUp.GetName() + "reb", xbinss)
         hMCttjetsMergedDn = hMCttjetsMergedDn.Rebin(len(xbinss) - 1, hMCttjetsMergedDn.GetName() + "reb", xbinss)
@@ -276,9 +260,9 @@ if __name__ == '__main__':
             print('*' * 80, '\n', '/' * 80)
 
         hMCttjetsMerged = hMCttjetsMerged.Clone()
-        totBkgTemp1[catStr] = rt.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'shapeOnly'))
-        totBkgTemp2[catStr] = rt.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'shapePlusNorm'))
-        dataDrivenTtBkgTemp[catStr] = rt.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'All'))
+        totBkgTemp1[catStr] = ROOT.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'shapeOnly'))
+        totBkgTemp2[catStr] = ROOT.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'shapePlusNorm'))
+        dataDrivenTtBkgTemp[catStr] = ROOT.TGraphAsymmErrors(hMCttjetsMerged.Clone(hMCttjetsMerged.GetName() + 'All'))
         for ibin in range(1, hMCttjetsMerged.GetNbinsX() + 1):
 
             errorUp = 0.
@@ -293,7 +277,7 @@ if __name__ == '__main__':
                 else:  errorDn = errorPlus ** 2
                 if errorMinus > 0:  errorDn = errorMinus ** 2
                 else: errorUp = errorMinus ** 2
-            except:
+            except ReferenceError:
                 print("failure up down data driven errors")
                 pass
             dataDrivenTtBkgTemp[catStr].SetPointEYhigh(ibin - 1, math.sqrt(errorUp))
@@ -301,6 +285,40 @@ if __name__ == '__main__':
             errorUpDn = math.sqrt(errorUp + errorDn) / 2
             hMCttjetsMerged.SetBinError(ibin, errorUpDn)
         h1error = dataDrivenTtBkgTemp[catStr].Clone()
+
+        totalBkgTemp2 = ROOT.TGraphAsymmErrors(hMC2ttjetsMerged.Clone(hMC2ttjetsMerged.GetName() + 'All'))
+        for ibin in range(1, hMC2ttjetsMerged.GetNbinsX() + 1):
+            errorUp = 0.
+            errorDn = 0.
+            errorStatOnly = hMC2ttjetsMerged.GetBinError(ibin) ** 2
+            errorNorm = 0.
+            # for proc in ['ttbb', 'ttnobb']:
+            #     try:
+            #         errorNorm += getNormUnc(bkghistsmerged2[proc + catStr], ibin, modelingSys[proc + '_' + modTag])
+            #     except ReferenceError or KeyError:
+            #         pass
+            if doAllSys:
+                for syst in systematicList:
+                    for proc in bkgProcList:
+                        try:
+                            errorPlus = systHistsMerged2[proc + 'isL' + tagStr + syst + '__plus'].GetBinContent(ibin) - \
+                                        bkghistsmerged2[proc + catStr].GetBinContent(ibin)
+                            errorMinus = bkghistsmerged2[proc + catStr].GetBinContent(ibin) - systHistsMerged2[
+                                proc + 'isL' + tagStr + syst + '__minus'].GetBinContent(ibin)
+                            if errorPlus > 0:
+                                errorUp += errorPlus ** 2
+                            else:
+                                errorDn += errorPlus ** 2
+                            if errorMinus > 0:
+                                errorDn += errorMinus ** 2
+                            else:
+                                errorUp += errorMinus ** 2
+                        except ReferenceError or KeyError:
+                            pass
+
+            totalBkgTemp2.SetPointEYhigh(ibin - 1, math.sqrt(errorUp + errorNorm + errorStatOnly))
+            totalBkgTemp2.SetPointEYlow(ibin - 1, math.sqrt(errorDn + errorNorm + errorStatOnly))
+        h2error = totalBkgTemp2.Clone()
 
         prob_KS = hMCttjetsMerged.KolmogorovTest(hMC2ttjetsMerged)
         prob_KS_X = hMCttjetsMerged.KolmogorovTest(hMC2ttjetsMerged, "X")
@@ -318,27 +336,26 @@ if __name__ == '__main__':
             print(histPrefixE + '_KolmogorovSmirnovX(pseudo experiments) =', prob_KS_X)
             print(histPrefixE + '_Chi2Test:')
             print("  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof)
-            print( '*' * 80, '\n', '/' * 80)
-
+            print('*' * 80, '\n', '/' * 80)
 
         # Numerator Attributes
-        hMCttjetsMerged.SetMarkerColor(rt.kRed-3)
-        hMCttjetsMerged.SetLineColor(rt.kRed+3)
-        hMCttjetsMerged.SetFillColor(rt.kRed-3)
+        hMCttjetsMerged.SetMarkerColor(ROOT.kRed - 3)
+        hMCttjetsMerged.SetLineColor(ROOT.kRed + 3)
+        hMCttjetsMerged.SetFillColor(ROOT.kRed - 3)
         hMCttjetsMerged.SetLineWidth(2)
         h1error.SetFillStyle(3004)
-        h1error.SetFillColor(rt.kBlack)
-        h1error.SetLineColor(rt.kBlack)
+        h1error.SetFillColor(ROOT.kBlack)
+        h1error.SetLineColor(ROOT.kBlack)
         # Denominator Attributes
         hMC2ttjetsMerged.SetMarkerStyle(24)
         hMC2ttjetsMerged.SetMarkerSize(1.2)
-        hMC2ttjetsMerged.SetMarkerColor(rt.kBlack)
-        hMC2ttjetsMerged.SetLineColor(rt.kBlack)
+        hMC2ttjetsMerged.SetMarkerColor(ROOT.kBlack)
+        hMC2ttjetsMerged.SetLineColor(ROOT.kBlack)
         hMC2ttjetsMerged.SetFillColor(0)
         hMC2ttjetsMerged.SetLineWidth(3)
         # h2error.SetFillStyle(3004)
-        # h2error.SetFillColor(rt.kBlue)
-        # h2error.SetLineColor(rt.kBlue)
+        # h2error.SetFillColor(ROOT.kBlue)
+        # h2error.SetLineColor(ROOT.kBlue)
 
         # ---------------------------------------------------------------------------------------------------------------
         # Create standrd Image Prefix
@@ -360,19 +377,19 @@ if __name__ == '__main__':
         pltr.L = 1.2 * pltr.L
         pltr.R = 0.2 * pltr.R
         pltr.T = 0.9 * pltr.T
-        pltr.h1 = hMCttjetsMerged
-        pltr.h2 = hMC2ttjetsMerged
-        pltr.err1 = h1error
+        pltr.h2 = hMCttjetsMerged
+        pltr.h1 = hMC2ttjetsMerged
         pltr.err2 = h1error
-        pltr.h2LegEntry = "Direct-MC"
-        pltr.h1LegEntry = "Estimate-MC"
+        pltr.err1 = h1error
+        pltr.h1LegEntry = "Direct-MC"
+        pltr.h2LegEntry = "Estimate-MC"
         # pltr.h1LegSubEntry = genflavLegend.copy()
         pltr.lumi_13TeV = str(lumi) + " fb^{-1}"
         pltr.writeExtraText = 1
         pltr.lumi_sqrtS = "13 TeV"
-        pltr.extraText = '#splitline{Work In Progress (Simulation)}{ #splitline{' + flvString + ', #geq0 t, ' + tagString + '}{ KS: ' +str(prob_KS) +' #chi^{2} p-value:'+str(prob_chi2)+ '}}'
+        pltr.extraText = '#splitline{Work In Progress (Simulation)}{ #splitline{' + flvString + ', #geq0 t, ' + tagString + '}{ KS: ' +str(prob_KS) +', #chi^{2} p-value:'+str(prob_chi2)+ '}}'
         pltr.tag = tag
-        pltr.pullXTitle = 'Direct/Estimate'
+        pltr.pullYTitle = '#frac{Direct}{Estimate}'
         # pltr.printRatioTxt = False
         pltr.saveImagePng = savePrefixmerged
         # pltr.plotLowerPad =False
