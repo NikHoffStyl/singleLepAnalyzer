@@ -137,7 +137,8 @@ def eventTrfProbMultiTag(combIndex, effList, invEffList):
         # print combList
         for jtIndex in combList:
             # print jtIndex
-            probNotTagged.remove(invEffList[jtIndex])
+            # probNotTagged.remove(invEffList[jtIndex])
+            probNotTagged.pop(jtIndex)
             probTagged.append(effList[jtIndex][0])
         pEventSub = (np.prod(probTagged) * np.prod(probNotTagged))
         pEvent += pEventSub
@@ -159,7 +160,10 @@ def eventTrfProbOneTag(jIndxMax, effList, invEffList):
     pEventErrorTemp = []
     for jtIndex in range(0, jIndxMax):
         probNotTagged = [x[0] for x in invEffList]
-        probNotTagged.remove(invEffList[jtIndex][0])
+        # print(invEffList)
+        # probNotTagged.remove(invEffList[jtIndex][0])
+        # print(effList)
+        probNotTagged.pop(jtIndex)
         probTagged = effList[jtIndex][0]
         pEventSub = (probTagged * np.prod(probNotTagged))
         pEventErrorTemp.append((pEventSub ** 2) * sum([((x[1] / x[0]) ** 2) for x in effList if x[0] != 0]))
@@ -197,11 +201,23 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
     pProd = cutChoice.printProdPlots
     pProd = True
     if 'JetSubCalc' in btag_Flav:
-        if year==2017: btag_discCut = 0.3033
-        elif year==2018: btag_discCut = 0.2770
+        if year==2017:
+            btag_discCut = 0.3033
+            cVSb_tag_discCut = 0.
+            cVSudsg_tag_discCut = 0.
+        elif year==2018:
+            btag_discCut = 0.2770
+            cVSb_tag_discCut = 0.29
+            cVSudsg_tag_discCut = 0.085
     elif 'MultiLepCalc' in btag_Flav:
-        if year==2017: btag_discCut = 0.4941
-        elif year==2018: btag_discCut = 0.4184
+        if year==2017:
+            btag_discCut = 0.4941
+            cVSb_tag_discCut = 0.28
+            cVSudsg_tag_discCut = 0.15
+        elif year==2018:
+            btag_discCut = 0.4184
+            cVSb_tag_discCut = 0.29
+            cVSudsg_tag_discCut = 0.137
     else: sys.exit('btag algorithm problem')
     catStr = 'is' + isEM + '_nHOT' + cat.nhott + '_nT' + cat.nttag + '_nW' + cat.nWtag + '_nB' + nbtag + '_nJ' + njets
     kentry = 0
@@ -230,17 +246,17 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
     # else:
     #     sys.exit('Process has no json file specified! Please look into the problem! Process is: ' +process)
 
-    with open("eff_B2pBflav_tt.json", "r") as read_file:
-        doubleDiction_bFlv = json.load(read_file)
+    # with open("eff_B2pBflav_tt.json", "r") as read_file:
+    #     doubleDiction_bFlv = json.load(read_file)
+    #
+    # with open("eff_B2pCflav_tt.json", "r") as read_file:
+    #     doubleDiction_cFlv = json.load(read_file)
+    #
+    # with open("eff_B2pLiFlav_tt.json", "r") as read_file:
+    #     doubleDiction_LFlv = json.load(read_file)
 
-    with open("eff_B2pCflav_tt.json", "r") as read_file:
-        doubleDiction_cFlv = json.load(read_file)
-
-    with open("eff_B2pLiFlav_tt.json", "r") as read_file:
-        doubleDiction_LFlv = json.load(read_file)
-
-    # with open("eff_B2p.json", "r") as read_file:
-    #     doubleDiction = json.load(read_file)
+    with open("eff_B2p.json", "r") as read_file:
+        doubleDiction = json.load(read_file)
 
     with open("eff_B3p.json", "r") as read_file:
         doubleDiction3p = json.load(read_file)
@@ -249,8 +265,11 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
     #                                          DECLARE HISTOGRAMS
     # ------------------------------------------------------------------------------------------------------------------
     hists = {}
+    # 'DenrB', 'DenrC', 'DenrUDSG','NumrB', 'NumrC', 'NumrUDSG'
     denumList = ['Denr', 'Numr']
-    btaglist = ['B'+nbtag, 'B2', 'B3', 'B4p']
+    if nbtag=='2p': btaglist = ['B'+nbtag, 'B2', 'B3', 'B4p']
+    elif nbtag=='3p': btaglist = ['B'+nbtag, 'B3', 'B4p']
+    elif nbtag=='0p': btaglist = ['B'+nbtag, 'B0', 'B1','B2', 'B3', 'B4p']
     cbTruthBins = ['', 'Bin1_', 'Bin2_', 'Bin3_', 'Bin4_']
     systList = ['pileup', 'prefire', 'muRFcorrd', 'muR', 'muF', 'isr', 'fsr']
     histPostFix = '_' + lumiStr + '_' + catStr + '_' + process + flv + '_'
@@ -266,6 +285,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         xbins = array('d', plotDetails[kPlot]['xbins' + extraKey])
         if thDim == 2: ybins = array('d', plotDetails[kPlot]['ybins' + extraKey])
         for denum in denumList:
+            if 'Top' in kPlot and 'Numr' in denum: continue
             histPostFixNew = histPostFix + denum
             for bCut in btaglist:
                 histPostFix2New = histPostFixNew.replace('_nB' + nbtag, '_n' + bCut)
@@ -283,7 +303,12 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                             else: iniTH1(hists, estB2str +cbtruthBinN + kPlot + histPostFix2New, plotDetails[kPlot]['title'], xbins)
 
                 # ----------------------------------------------------------------------------------------------------------
-                for flavType in ['Bflav', 'topBflav', 'Cflav', 'LiFlav']:
+                if kPlot=='KeptJetsDRtoAllJetsMin' or kPlot=='KeptJetsPlusOtherJetInvMass':
+                    flvList = ['Wq_Wqflav', 'Wq_cflav','Wq_bflav','Wq_Liflav', 'gq_gqflav']
+                    # ['c_Liflav', 'Wc_cflav', 'c_bflav', 'Wc_Liflav', 'Wc_bflav',
+                    #            'Wc_Wcflav', 'c_cflav', 'Li_LiFlav', 'b_bFlav', 'b_Liflav']
+                else: flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav', 'WCflav','WLiFlav', 'WBflav']
+                for flavType in flvList:
                     if 'Kept' not in kPlot: continue
                     if 'Count' in kPlot: continue
                     if thDim == 2: iniTH2(hists, kPlot + histPostFix2New + flavType, plotDetails[kPlot]['title'], xbins, ybins)
@@ -322,7 +347,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
     for eventInProcTree in tTRee[process]:
         NumberOfInitEvents +=1
         kentry += 1
-        numeratorBool = False
+        jet_btagged = False
         if not (eventInProcTree.minDR_lepJet > 0.4): continue
         if not (eventInProcTree.AK4HT > cutChoice.AK4HTCut): continue
         if not (eventInProcTree.corr_met_MultiLepCalc > cutChoice.metCut): continue
@@ -423,7 +448,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         btagDeepJetvar = eventInProcTree.theJetDeepFlavB_JetSubCalc_PtOrdered
         btagvarsize = len(btagvar)
         btagvarbbsize = len(btagvarbb)  # these following four lines are not needed just here for extra safety
-        jetsize = len(eventInProcTree.theJetPt_JetSubCalc_PtOrdered)
+        jetsize = eventNJets # len(eventInProcTree.theJetPt_JetSubCalc_PtOrdered)
         if btagvarsize != btagvarbbsize: sys.exit('\n [ERROR]: Length of csvb and csvbb different')
         if btagvarsize != jetsize: sys.exit('\n [ERROR]: Length of csvb and jets different')
         # --------------------------------------------------------------------------------------------------------------
@@ -431,150 +456,236 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         # --------------------------------------------------------------------------------------------------------------
         Btag_LVectrDict.clear()
         jetTempDict.clear()
-        firstRecoTopB_LVec = secondRecoTopB_LVec = thirdHighBtag_LVec = 0
-        if len(eventInProcTree.topbEnergy_TTbarMassCalc) != 2 and 'TTJets' in process:
-            error_msg = '\n [ERROR]:Number of tops should be 2, but it is ' + str(len(eventInProcTree.topbEnergy_TTbarMassCalc)) + ' in process ' + process
-            sys.exit(error_msg)
-        topbdrmax = 0.15
-        firstRecoTopB_Indx = secondRecoTopB_Indx = thirdHighBtag_Indx = 99
-        if 'TTJets' in process:
-            topBdrTemp = topB_dr = 99
-            for topbjetIndx in range(0, 2):
-                del topbbdrList[:]
-                recotopbdict.clear()
-                topB_lv = TLorentzVector()
-                topB_lv.SetPtEtaPhiE(eventInProcTree.topbPt_TTbarMassCalc[topbjetIndx], eventInProcTree.topbEta_TTbarMassCalc[topbjetIndx], eventInProcTree.topbPhi_TTbarMassCalc[topbjetIndx], eventInProcTree.topbEnergy_TTbarMassCalc[topbjetIndx])
-                for jet_i in range(0, eventNJets):
-                    if topbjetIndx == 1 and jet_i == firstRecoTopB_Indx: continue
-                    if topbjetIndx == 1 and firstRecoTopB_Indx == 99: continue
-                    j_disc = btagvar[jet_i] + btagvarbb[jet_i]
-                    if 'JetSubCalc' in btag_Flav: j_disc = btagDeepJetvar[jet_i]
-                    kjet_lv = TLorentzVector()
-                    kjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i], eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i], eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_i], eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_i])
-                    topBdrTemp = topB_lv.DeltaR(kjet_lv)  # DR between true-topB and random jet
+        doTopBRemoval=True
+        if nbtag=='0p': doTopBRemoval=False
+        if doTopBRemoval:
+            firstRecoTopB_LVec = secondRecoTopB_LVec = thirdHighBtag_LVec = 0
+            if len(eventInProcTree.topbEnergy_TTbarMassCalc) != 2 and 'TTJets' in process:
+                error_msg = '\n [ERROR]:Number of tops should be 2, but it is ' + str(len(eventInProcTree.topbEnergy_TTbarMassCalc)) + ' in process ' + process
+                sys.exit(error_msg)
+            topbdrmax = 0.15
+            firstRecoTopB_Indx = secondRecoTopB_Indx = thirdHighBtag_Indx = 99
+            if 'TTJets' in process:
+                topBdrTemp = topB_dr = 99
+                for topbjetIndx in range(0, 2):
+                    del topbbdrList[:]
+                    recotopbdict.clear()
+                    topB_lv = TLorentzVector()
+                    topB_lv.SetPtEtaPhiE(eventInProcTree.topbPt_TTbarMassCalc[topbjetIndx], eventInProcTree.topbEta_TTbarMassCalc[topbjetIndx], eventInProcTree.topbPhi_TTbarMassCalc[topbjetIndx], eventInProcTree.topbEnergy_TTbarMassCalc[topbjetIndx])
+                    for jet_i in range(0, eventNJets):
+                        if topbjetIndx == 1 and jet_i == firstRecoTopB_Indx: continue
+                        if topbjetIndx == 1 and firstRecoTopB_Indx == 99: continue
+                        j_disc = btagvar[jet_i] + btagvarbb[jet_i]
+                        if 'JetSubCalc' in btag_Flav: j_disc = btagDeepJetvar[jet_i]
+                        jet_btaggedTopB =False
+                        if j_disc > btag_discCut: jet_btaggedTopB = True
+                        if btag_Flav == 'NJetsCSVwithSF_MultiLepCalc': jet_btaggedTopB = eventInProcTree.AK4JetBTag_MultiLepCalc_PtOrdered[jet_i]
+                        if btag_Flav == 'NJetsCSVwithSF_JetSubCalc': jet_btaggedTopB = eventInProcTree.theJetBTag_JetSubCalc_PtOrdered[jet_i]
 
-                    recotopbdict.update({topBdrTemp: [jet_i, j_disc, kjet_lv]})
-                    if abs(recotopbdict[topBdrTemp][2].Pt() - eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i]) > zero:
-                        error_msg = '\n  kjet_lv.Pt() = ' + str(kjet_lv.Pt()) + '\n'
-                        error_msg += ' eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i] = ' + str(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i])
-                        error_msg += '[ERROR]0: Guess what problem with memory dictionary allocation!'
-                        sys.exit(error_msg)
+                        kjet_lv = TLorentzVector()
+                        kjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i], eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i], eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_i], eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_i])
+                        topBdrTemp = topB_lv.DeltaR(kjet_lv)  # DR between true-topB and random jet
 
-                    if eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i] == 5:
-                        if j_disc > btag_discCut:
+                        recotopbdict.update({topBdrTemp: [jet_i, j_disc, kjet_lv]})
+                        if abs(recotopbdict[topBdrTemp][2].Pt() - eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i]) > zero:
+                            error_msg = '\n  kjet_lv.Pt() = ' + str(kjet_lv.Pt()) + '\n'
+                            error_msg += ' eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i] = ' + str(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i])
+                            error_msg += '[ERROR]0: Guess what problem with memory dictionary allocation!'
+                            sys.exit(error_msg)
+
+                        if abs(eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i]) == 5:
+                            if not jet_btaggedTopB: continue
                             if abs(kjet_lv.Pt() - topB_lv.Pt()) > 30: continue
                             while topBdrTemp in topbbdrList: topBdrTemp += 0.0001
                             topbbdrList.append(topBdrTemp)
-                if len(topbbdrList) == 0: continue
-                topB_dr = min(topbbdrList)
+                    if len(topbbdrList) == 0: continue
+                    topB_dr = min(topbbdrList)
 
-                jetTempDict = recotopbdict.copy()
-                # if len(jetTempDict) != len(recotopbdict): sys.exit('Problem len(jetTempDict) != len(recotopbdict ')
-                if topbjetIndx == 0:
-                    if topB_dr < topbdrmax:
-                        [firstRecoTopB_Indx, firstRecoTopB_Disc, firstRecoTopB_LVec] = recotopbdict[topB_dr]
-                        jetTempDict.pop(topB_dr)
-                elif topbjetIndx == 1:
-                    if firstRecoTopB_Indx == 99:
-                        error_msg = '\n [ERROR]: Number of removed jets not 1 it is  in process ' + process
+                    jetTempDict = recotopbdict.copy()
+                    # if len(jetTempDict) != len(recotopbdict): sys.exit('Problem len(jetTempDict) != len(recotopbdict ')
+                    if topbjetIndx == 0:
+                        if topB_dr < topbdrmax:
+                            [firstRecoTopB_Indx, firstRecoTopB_Disc, firstRecoTopB_LVec] = recotopbdict[topB_dr]
+                            jetTempDict.pop(topB_dr)
+                    elif topbjetIndx == 1:
+                        if firstRecoTopB_Indx == 99:
+                            error_msg = '\n [ERROR]: Number of removed jets not 1  in process ' + process
+                            sys.exit(error_msg)
+                        if topB_dr < topbdrmax:
+                            [secondRecoTopB_Indx, secondRecoTopB_Disc, secondRecoTopB_LVec] = recotopbdict[topB_dr]
+                            if firstRecoTopB_Indx == secondRecoTopB_Indx: sys.exit('Occurence of same index between reco topb jets should have already been removed')
+                            jetTempDict.pop(topB_dr)
+                            if nbtag == '3p':
+                                if len(jetTempDict) != (nAdditionalJets + 1): sys.exit('Problem len(jetTempDict) !=  ' + str(nAdditionalJets + 1) + ' it is ==' + str(len(jetTempDict)))
+                            else:
+                                if len(jetTempDict) != nAdditionalJets: sys.exit('Problem len(jetTempDict) !=  ' + str(nAdditionalJets) + ' it is ==' + str(len(jetTempDict)))
+                    else:
+                        error_msg = '\n [ERROR]:Number of tops should be 2, but it is >= ' + str(topbjetIndx) + ' in process ' + process
                         sys.exit(error_msg)
-                    if topB_dr < topbdrmax:
-                        [secondRecoTopB_Indx, secondRecoTopB_Disc, secondRecoTopB_LVec] = recotopbdict[topB_dr]
-                        if firstRecoTopB_Indx == secondRecoTopB_Indx: sys.exit('Occurence of same index between reco topb jets should have already been been removed')
-                        jetTempDict.pop(topB_dr)
-                        if nbtag == '3p':
-                            if len(jetTempDict) != (nAdditionalJets + 1): sys.exit('Problem len(jetTempDict) !=  ' + str(nAdditionalJets + 1) + ' it is ==' + str(len(jetTempDict)))
-                        else:
-                            if len(jetTempDict) != nAdditionalJets: sys.exit('Problem len(jetTempDict) !=  ' + str(nAdditionalJets) + ' it is ==' + str(len(jetTempDict)))
-                else:
-                    error_msg = '\n [ERROR]:Number of tops should be 2, but it is >= ' + str(topbjetIndx) + ' in process ' + process
-                    sys.exit(error_msg)
 
-                if firstRecoTopB_Indx == 99 or secondRecoTopB_Indx == 99: continue
-                if recotopbdict[topB_dr][1] > btag_discCut: numeratorBool = True
-                else: numeratorBool = False
-                for denum in denumList:
-                    histPostFixNew = histPostFix + denum
-                    if denum == 'Numr' and numeratorBool == False: continue
-                    hists['TopBDR' + histPostFixNew].Fill(topB_dr, weightNum)
-                    hists['recoTopBPt' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Pt(), weightNum)
-                    hists['recoTopBEta' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Eta(), weightNum)
-                    hists['recoTopBPhi' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Phi(), weightNum)
-                    hists['TopBPt2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Pt(), topB_lv.Pt(), weightNum)
-                    hists['TopBEta2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Eta(), topB_lv.Eta(), weightNum)
-                    hists['TopBPhi2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Phi(), topB_lv.Phi(), weightNum)
-                    if denum == 'Denr':
+                    if firstRecoTopB_Indx == 99 or secondRecoTopB_Indx == 99: continue
+                    if recotopbdict[topB_dr][1] > btag_discCut: jet_btagged = True
+                    else: jet_btagged = False
+                    if btag_Flav == 'NJetsCSVwithSF_MultiLepCalc': jet_btagged = eventInProcTree.AK4JetBTag_MultiLepCalc_PtOrdered[recotopbdict[topB_dr][0]]
+                    if btag_Flav == 'NJetsCSVwithSF_JetSubCalc': jet_btagged = eventInProcTree.theJetBTag_JetSubCalc_PtOrdered[recotopbdict[topB_dr][0]]
+
+                    for denum in denumList:
+                        histPostFixNew = histPostFix + denum
+                        if denum in ['Numr', 'NumrB', 'NumrC', 'NumrUDSG','DenrB', 'DenrC', 'DenrUDSG']: continue
+                        hists['TopBDR' + histPostFixNew].Fill(topB_dr, weightNum)
+                        hists['recoTopBPt' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Pt(), weightNum)
+                        hists['recoTopBEta' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Eta(), weightNum)
+                        hists['recoTopBPhi' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Phi(), weightNum)
+                        hists['TopBPt2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Pt(), topB_lv.Pt(), weightNum)
+                        hists['TopBEta2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Eta(), topB_lv.Eta(), weightNum)
+                        hists['TopBPhi2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Phi(), topB_lv.Phi(), weightNum)
                         hists['TopBPt' + histPostFixNew].Fill(topB_lv.Pt(), weightNum)
                         hists['TopBEta' + histPostFixNew].Fill(topB_lv.Eta(), weightNum)
                         hists['TopBPhi' + histPostFixNew].Fill(topB_lv.Phi(), weightNum)
 
-            if firstRecoTopB_Indx == 99 or secondRecoTopB_Indx == 99: continue  # remove event
-            if len(jetTempDict) != 0:
-                while len(jetTempDict) != 0:
-                    [j_indx, j_disc, j_lvec] = jetTempDict[min(jetTempDict)]
-                    while j_disc in bCsvDiscr: j_disc += 0.000001
+                if firstRecoTopB_Indx == 99 or secondRecoTopB_Indx == 99: continue  # remove event
+                if len(jetTempDict) != 0:
+                    while len(jetTempDict) != 0:
+                        [j_indx, j_disc, j_lvec] = jetTempDict[min(jetTempDict)]
+                        while j_disc in bCsvDiscr: j_disc += 0.000001
+                        bCsvDiscr.append(j_disc)
+                        Btag_LVectrDict.update({j_disc: [j_indx, j_lvec]})
+                        jetTempDict.pop(min(jetTempDict))
+                    if nbtag == '3p':
+                        thirdHighBtag_Disc = max(Btag_LVectrDict)
+                        [thirdHighBtag_Indx, thirdHighBtag_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
+                        Btag_LVectrDict.pop(max(Btag_LVectrDict))
+                    if len(jetTempDict) != 0:
+                        error_msg = '\n [ERROR]: B-List is Temporary at this point it should have been emptied'
+                        sys.exit(error_msg)
+                if len(Btag_LVectrDict) != nAdditionalJets:
+                    error_msg = '\n [ERROR]:Number of Kept jets in process ' + process + ' not ' + str(nAdditionalJets) + ' it is ' + str(len(Btag_LVectrDict))
+                    sys.exit(error_msg)
+                if nbtag == '2p' and thirdHighBtag_Indx != 99:
+                    error_msg = '\n [ERROR]: Third jet removed when it shouldnt in process ' + process
+                    sys.exit(error_msg)
+                elif nbtag == '3p' and thirdHighBtag_Indx == 99:
+                    error_msg = '\n [ERROR]: Third jet not removed when it should in process ' + process
+                    sys.exit(error_msg)
+            else:
+                del topbbdrList[:]
+                for jet_i in range(0, eventNJets):
+                    flavtopB = False
+                    flavB = False
+                    j_disc = btagvar[jet_i] + btagvarbb[jet_i]
+                    if 'JetSubCalc' in btag_Flav: j_disc = btagDeepJetvar[jet_i]
+
+                    while j_disc in bCsvDiscr:
+                        j_disc += 0.000001
                     bCsvDiscr.append(j_disc)
-                    Btag_LVectrDict.update({j_disc: [j_indx, j_lvec]})
-                    jetTempDict.pop(min(jetTempDict))
+                    kjet_lv = TLorentzVector()
+                    kjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i],
+                                         eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i],
+                                         eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_i],
+                                         eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_i])
+                    Btag_LVectrDict.update({j_disc: [jet_i, kjet_lv]})
+                firstRecoTopB_LVec = secondRecoTopB_LVec = thirdHighBtag_LVec = 0
+                if nbtag != '0p':
+                    if len(Btag_LVectrDict) == 0: sys.exit('[ERROR]1: Number of Kept Jets is zero')
+                    firstRecoTopB_Disc = max(Btag_LVectrDict)
+                    [firstRecoTopB_Indx, firstRecoTopB_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
+                    Btag_LVectrDict.pop(max(Btag_LVectrDict))
+                    if kentry == 0:
+                        if verbose > 1: print('removing the 1st bjet')
+                    if len(Btag_LVectrDict) == 0: sys.exit('[ERROR]2: Number of Kept Jets is zero')
+                    secondRecoTopB_Disc = max(Btag_LVectrDict)
+                    [secondRecoTopB_Indx, secondRecoTopB_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
+                    Btag_LVectrDict.pop(max(Btag_LVectrDict))
+                    if kentry == 0:
+                        if verbose > 1: print('removing the 2nd bjet')
                 if nbtag == '3p':
+                    if len(Btag_LVectrDict) == 0: sys.exit('[ERROR]3: Number of Kept Jets is zero')
                     thirdHighBtag_Disc = max(Btag_LVectrDict)
                     [thirdHighBtag_Indx, thirdHighBtag_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
                     Btag_LVectrDict.pop(max(Btag_LVectrDict))
-                if len(jetTempDict) != 0:
-                    error_msg = '\n [ERROR]: B-List is Temporary at this point it should have been emptied'
-                    sys.exit(error_msg)
-            if len(Btag_LVectrDict) != nAdditionalJets:
-                error_msg = '\n [ERROR]:Number of Kept jets in process ' + process + ' not ' + str(nAdditionalJets) + ' it is ' + str(len(Btag_LVectrDict))
-                sys.exit(error_msg)
-            if nbtag == '2p' and thirdHighBtag_Indx != 99:
-                error_msg = '\n [ERROR]: Third jet removed when it shouldnt in process ' + process
-                sys.exit(error_msg)
-            elif nbtag == '3p' and thirdHighBtag_Indx == 99:
-                error_msg = '\n [ERROR]: Third jet not removed when it should in process ' + process
-                sys.exit(error_msg)
+                    if kentry == 0:
+                        if verbose > 1: print('removing the 3rd bjet')
+
+            if kentry < 3:
+                if verbose > 2:
+                    print(' KeptJets: ', Btag_LVectrDict)
         else:
-            del topbbdrList[:]
-            for jet_i in range(0, eventNJets):
-                flavtopB = False
-                flavB = False
-                j_disc = btagvar[jet_i] + btagvarbb[jet_i]
-                if 'JetSubCalc' in btag_Flav: j_disc = btagDeepJetvar[jet_i]
-
-                while j_disc in bCsvDiscr:
-                    j_disc += 0.000001
-                bCsvDiscr.append(j_disc)
-                kjet_lv = TLorentzVector()
-                kjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i],
-                                     eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i],
-                                     eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_i],
-                                     eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_i])
-                Btag_LVectrDict.update({j_disc: [jet_i, kjet_lv]})
-            firstRecoTopB_LVec = secondRecoTopB_LVec = thirdHighBtag_LVec = 0
-            if nbtag != '0p':
-                if len(Btag_LVectrDict) == 0: sys.exit('[ERROR]1: Number of Kept Jets is zero')
-                firstRecoTopB_Disc = max(Btag_LVectrDict)
-                [firstRecoTopB_Indx, firstRecoTopB_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
-                Btag_LVectrDict.pop(max(Btag_LVectrDict))
-                if kentry == 0:
-                    if verbose > 1: print('removing the 1st bjet')
-                if len(Btag_LVectrDict) == 0: sys.exit('[ERROR]2: Number of Kept Jets is zero')
-                secondRecoTopB_Disc = max(Btag_LVectrDict)
-                [secondRecoTopB_Indx, secondRecoTopB_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
-                Btag_LVectrDict.pop(max(Btag_LVectrDict))
-                if kentry == 0:
-                    if verbose > 1: print('removing the 2nd bjet')
-            if nbtag == '3p':
-                if len(Btag_LVectrDict) == 0: sys.exit('[ERROR]3: Number of Kept Jets is zero')
-                thirdHighBtag_Disc = max(Btag_LVectrDict)
-                [thirdHighBtag_Indx, thirdHighBtag_LVec] = Btag_LVectrDict[max(Btag_LVectrDict)]
-                Btag_LVectrDict.pop(max(Btag_LVectrDict))
-                if kentry == 0:
-                    if verbose > 1: print('removing the 3rd bjet')
-
-        if kentry < 3:
-            if verbose > 2:
-                print(' KeptJets: ', Btag_LVectrDict)
+            firstRecoTopB_Indx = secondRecoTopB_Indx = thirdHighBtag_Indx = 99
         acceptedCount += 1
+
+        # --------------------------------------------------------------------------------------------------------------
+        #                      IDENTIFY c-JETS from W
+        # --------------------------------------------------------------------------------------------------------------
+        RecoTopW_LVec = [0]*4
+        numberOfTopWDaughters = len(eventInProcTree.topWEnergy_TTbarMassCalc)
+        # if numberOfTopWDaughters <3 : continue
+        if (numberOfTopWDaughters !=0 and numberOfTopWDaughters != 2 and numberOfTopWDaughters != 4) and 'TTJets' in process:
+            error_msg = '\n [ERROR]:Number of W daughters should be 0,2 or 4, but it is ' + str(numberOfTopWDaughters) + ' in process ' + process
+            sys.exit(error_msg)
+        topWdrmax = 0.1
+        RecoTopW_lf_Indx = []
+        RecoTopW_c_Indx = []
+        RecoTopW_b_Indx = []
+        recotopWdict = {}
+        topWdrList = []
+        if 'TTJets' in process:
+            topWdrTemp = topW_dr = 99
+            for topWjetIndx in range(0, numberOfTopWDaughters):
+                del topWdrList[:]
+                recotopWdict.clear()
+                topW_lv = TLorentzVector()
+                topW_lv.SetPtEtaPhiE(eventInProcTree.topWPt_TTbarMassCalc[topWjetIndx],
+                                     eventInProcTree.topWEta_TTbarMassCalc[topWjetIndx],
+                                     eventInProcTree.topWPhi_TTbarMassCalc[topWjetIndx],
+                                     eventInProcTree.topWEnergy_TTbarMassCalc[topWjetIndx])
+                topW_flv = abs(eventInProcTree.topWID_TTbarMassCalc[topWjetIndx])
+                # if topW_flv != 4: continue
+                for jet_i in range(0, eventNJets):
+                    if jet_i == firstRecoTopB_Indx: continue
+                    if jet_i == secondRecoTopB_Indx: continue
+                    jet_Hflv = abs(eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i])
+                    jet_pFlv = abs(eventInProcTree.theJetPFlav_JetSubCalc_PtOrdered[jet_i])
+                    if jet_Hflv != topW_flv and jet_pFlv != topW_flv: continue
+                    kjet_lv = TLorentzVector()
+                    kjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i],
+                                         eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i],
+                                         eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_i],
+                                         eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_i])
+                    topWdrTemp = topW_lv.DeltaR(kjet_lv)  # DR between true-topW and random jet
+
+                    jet_disc = btagvar[jet_i] + btagvarbb[jet_i]
+                    if 'JetSubCalc' in btag_Flav: jet_disc = btagDeepJetvar[jet_i]
+                    recotopWdict.update({topWdrTemp: [jet_i, j_disc, kjet_lv]})
+
+                    if abs(kjet_lv.Pt() - topW_lv.Pt()) > 50: continue
+                    while topWdrTemp in topWdrList: topWdrTemp += 0.0001
+                    topWdrList.append(topWdrTemp)
+                if len(topWdrList) == 0: continue
+                topW_dr = min(topWdrList)
+                if topW_dr < topWdrmax:
+                    if topW_flv == 4: RecoTopW_c_Indx.append(recotopWdict[topW_dr][0])
+                    elif topW_flv == 5: RecoTopW_b_Indx.append(recotopWdict[topW_dr][0])
+                    elif topW_flv < 4: RecoTopW_lf_Indx.append(recotopWdict[topW_dr][0])
+                    else:
+                        error_msg = 'TopW daughter pdgID not expected it is:' + topW_flv
+                        sys.exit(error_msg)
+
+                for denum in denumList:
+                    histPostFixNew = histPostFix + denum
+                    if denum in ['Numr', 'NumrB', 'NumrC', 'NumrUDSG', 'DenrB', 'DenrC', 'DenrUDSG']: continue
+                    hists['TopWDR' + histPostFixNew].Fill(topW_dr, weightNum)
+                    hists['recoTopWPt' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Pt(), weightNum)
+                    hists['recoTopWEta' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Eta(), weightNum)
+                    hists['recoTopWPhi' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Phi(), weightNum)
+                    hists['TopWPt2D' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Pt(), topW_lv.Pt(), weightNum)
+                    hists['TopWEta2D' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Eta(), topW_lv.Eta(), weightNum)
+                    hists['TopWPhi2D' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Phi(), topW_lv.Phi(), weightNum)
+                    hists['TopWPt' + histPostFixNew].Fill(topW_lv.Pt(), weightNum)
+                    hists['TopWEta' + histPostFixNew].Fill(topW_lv.Eta(), weightNum)
+                    hists['TopWPhi' + histPostFixNew].Fill(topW_lv.Phi(), weightNum)
+        eventHasWcX = bool(RecoTopW_c_Indx)
+        # if eventHasWcX: continue
+
         # --------------------------------------------------------------------------------------------------------------
         #                      LOAD TRF EFFICIENCIES GIVEN JET INFO
         # --------------------------------------------------------------------------------------------------------------
@@ -582,14 +693,15 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         eff_jetsList_3p = []
         inv_eff_jetsList_2p = []
         inv_eff_jetsList_3p = []
+        new_nAdditionalJets = nAdditionalJets
         for jet_i in range(0, eventNJets):
             jet_flv = eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i]
-            if jet_flv == 4:
-                doubleDiction = doubleDiction_cFlv
-            elif jet_flv == 5:
-                doubleDiction = doubleDiction_bFlv
-            else:
-                doubleDiction = doubleDiction_LFlv
+            # if jet_flv == 4:
+            #     doubleDiction = doubleDiction_cFlv
+            # elif jet_flv == 5:
+            #     doubleDiction = doubleDiction_bFlv
+            # else:
+            #     doubleDiction = doubleDiction_LFlv
 
             if jet_i == firstRecoTopB_Indx: continue
             if jet_i == secondRecoTopB_Indx: continue
@@ -620,7 +732,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         probZeroTags_2p = np.prod([x[0] for x in inv_eff_jetsList_2p])
         probZeroTagsError_2p = math.sqrt(
             (probZeroTags_2p ** 2) * sum([((x[1] / x[0]) ** 2) for x in inv_eff_jetsList_2p]))
-        probOneTag_2p, probOneTagError_2p = eventTrfProbOneTag(nAdditionalJets, eff_jetsList_2p, inv_eff_jetsList_2p)
+        probOneTag_2p, probOneTagError_2p = eventTrfProbOneTag(new_nAdditionalJets, eff_jetsList_2p, inv_eff_jetsList_2p)
         probMultiTag_2p = 1 - probOneTag_2p - probZeroTags_2p
         probMultiTag_Error_2p = math.sqrt((probZeroTagsError_2p ** 2) + (probOneTagError_2p ** 2))
 
@@ -629,7 +741,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         probZeroTags_3p = np.prod([x[0] for x in inv_eff_jetsList_3p])
         probZeroTagsError_3p = math.sqrt(
             (probZeroTags_3p ** 2) * sum([((x[1] / x[0]) ** 2) for x in inv_eff_jetsList_3p]))
-        probOneTag_3p, probOneTagError_3p = eventTrfProbOneTag(nAdditionalJets - 1, eff_jetsList_3p,
+        probOneTag_3p, probOneTagError_3p = eventTrfProbOneTag(new_nAdditionalJets - 1, eff_jetsList_3p,
                                                                inv_eff_jetsList_3p)
         probMultiTag_3p = 1 - probOneTag_3p - probZeroTags_3p
         probMultiTag_Error_3p = math.sqrt((probZeroTagsError_3p ** 2) + (probOneTagError_3p ** 2))
@@ -655,61 +767,271 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         else: histPostFixPart = histPostFix.replace('_nB' + nbtag, '_nB4p')
         c_count = bfg_count = bft_count = uds_count = unk_count = num_count = 0
         jetsAlreadyDRd = []
+        minjetdrPerEventCounter = 0
         for jet_i in range(0, eventNJets):
             if jet_i == firstRecoTopB_Indx: continue
             if jet_i == secondRecoTopB_Indx: continue
             if jet_i == thirdHighBtag_Indx: continue
+            jet_pt = eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i]
+            jet_eta = abs(eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i])
+            jet_flv = abs(eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i])
+
+            jet_disc = btagvar[jet_i] + btagvarbb[jet_i]
+            if 'JetSubCalc' in btag_Flav: jet_disc = btagDeepJetvar[jet_i]
+            jet_btagged = False
+            if jet_disc > btag_discCut: jet_btagged = True
+            if btag_Flav == 'NJetsCSVwithSF_MultiLepCalc': jet_btagged = eventInProcTree.AK4JetBTag_MultiLepCalc_PtOrdered[jet_i]
+            if btag_Flav == 'NJetsCSVwithSF_JetSubCalc': jet_btagged = eventInProcTree.theJetBTag_JetSubCalc_PtOrdered[jet_i]
+
+            cVSb_tag_disc = eventInProcTree.AK4JetDeepCSVc_MultiLepCalc_PtOrdered[jet_i] / (eventInProcTree.AK4JetDeepCSVc_MultiLepCalc_PtOrdered[jet_i] + jet_disc)
+            cTagBool = False
+            if cVSb_tag_disc > cVSb_tag_discCut: cTagBool = True
+
+            cVSudsg_tag_disc = eventInProcTree.AK4JetDeepCSVc_MultiLepCalc_PtOrdered[jet_i] / (eventInProcTree.AK4JetDeepCSVc_MultiLepCalc_PtOrdered[jet_i] + eventInProcTree.AK4JetDeepCSVudsg_MultiLepCalc_PtOrdered[jet_i])
+            udsgTagBool = False
+            if cVSudsg_tag_disc > cVSudsg_tag_discCut: udsgTagBool = True
+
+            jet_flav = 99
+            if jet_flv == 4:
+                c_count += 1
+                flavStr = 'Cflav'
+                if jet_i in RecoTopW_c_Indx:
+                    jet_flav = 24
+                    flavStr = 'WCflav'
+            elif jet_flv == 5:
+                bfg_count += 1
+                flavStr = 'Bflav'
+                if jet_i in RecoTopW_b_Indx:
+                    flavStr = 'WBflav'
+                    jet_flav = 24
+            else:
+                jet_flv = 3
+                uds_count += 1
+                flavStr = 'LiFlav'
+                if jet_i in RecoTopW_lf_Indx:
+                    flavStr = 'WLiFlav'
+                    jet_flav = 24
+
             keptjet_lv = TLorentzVector()
             keptjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i],
                                  eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i],
                                  eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_i],
                                  eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_i])
-            keptJetToAllJets = []
+            # keptJetToAllJets = []
+            keptFlavCJetToBUDSGAllJets = []
+            jet_LastSecIndexList = []
+            jet_LastSecFlavList = []
+            jet_LastSecLVecList = []
+            # oldDR=999
             for jet_SecondIndex in range(0, eventNJets):
-                if jet_SecondIndex in jetsAlreadyDRd: continue
+                if jet_SecondIndex == firstRecoTopB_Indx: continue
+                if jet_SecondIndex == secondRecoTopB_Indx: continue
+                if jet_SecondIndex == thirdHighBtag_Indx: continue
                 if jet_SecondIndex == jet_i: continue
+                if jet_SecondIndex in jetsAlreadyDRd: continue
+                jetSec_flv = abs(eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_SecondIndex])
+                if jet_SecondIndex in RecoTopW_c_Indx+RecoTopW_b_Indx+RecoTopW_lf_Indx: jetSec_flv = 24
+                # if jet_SecondIndex in RecoTopW_c_Indx:
+                #     if jet_i  in RecoTopW_lf_Indx+RecoTopW_b_Indx: continue
+                # elif jet_SecondIndex in RecoTopW_lf_Indx+RecoTopW_b_Indx:
+                #     if jet_i not in RecoTopW_c_Indx+RecoTopW_lf_Indx: continue
                 anyjet_lv = TLorentzVector()
                 anyjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_SecondIndex],
                                      eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_SecondIndex],
                                      eventInProcTree.theJetPhi_JetSubCalc_PtOrdered[jet_SecondIndex],
                                      eventInProcTree.theJetEnergy_JetSubCalc_PtOrdered[jet_SecondIndex])
-                keptJetToAllJets.append(keptjet_lv.DeltaR(anyjet_lv))
-            miniKeptJetToAllJets = min(keptJetToAllJets)
-            indexOfMax = keptJetToAllJets.index(miniKeptJetToAllJets)
-            jetsAlreadyDRd.append(indexOfMax)
+                jet_LastSecLVecList.append(anyjet_lv)
+                # keptJetToAllJets.append(keptjet_lv.DeltaR(anyjet_lv))
 
-            jet_pt = eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i]
-            jet_eta = abs(eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i])
-            jet_flv = eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i]
-            jet_disc = eventInProcTree.AK4JetDeepCSVb_MultiLepCalc_PtOrdered[jet_i]
-            jet_disc += eventInProcTree.AK4JetDeepCSVbb_MultiLepCalc_PtOrdered[jet_i]
-            numeratorBool = False
-            if jet_disc > btag_discCut: numeratorBool = True
-            if jet_flv == 4:
-                c_count += 1
-                flavStr = 'Cflav'
-            elif jet_flv == 5:
-                bfg_count += 1
-                flavStr = 'Bflav'
+                #  TAKE DeltaR BETWEEN JET AND ALL OTHER JETS IN EVENT
+                newDR = keptjet_lv.DeltaR(anyjet_lv)
+                keptFlavCJetToBUDSGAllJets.append(newDR)
+                jet_LastSecIndexList.append(jet_SecondIndex)
+                jet_LastSecFlavList.append(jetSec_flv)
+
+            if bool(keptFlavCJetToBUDSGAllJets):
+                minjetdrPerEventCounter +=1
+                miniKeptJetToAllJets = min(keptFlavCJetToBUDSGAllJets)
+                indexOfMax = keptFlavCJetToBUDSGAllJets.index(miniKeptJetToAllJets)
+                jet_LastSecIndex = jet_LastSecIndexList[indexOfMax]
+                jet_LastSecFlav = jet_LastSecFlavList[indexOfMax]
+                jet_LastSecLVec = jet_LastSecLVecList[indexOfMax]
+
+                jet_LastSecDisc = btagvar[jet_LastSecIndex] + btagvarbb[jet_LastSecIndex]
+                if 'JetSubCalc' in btag_Flav: jet_LastSecDisc = btagDeepJetvar[jet_LastSecIndex]
+                jet_LastSecBtagged = False
+                if jet_LastSecDisc > btag_discCut: jet_LastSecBtagged = True
+                elif jet_LastSecDisc < 0 and jet_LastSecDisc > -2 :
+                    error_msg = "The disc should not have a negative sign: " + str(jet_LastSecDisc)
+                    sys.exit(error_msg)
+                if btag_Flav == 'NJetsCSVwithSF_MultiLepCalc': jet_LastSecBtagged = eventInProcTree.AK4JetBTag_MultiLepCalc_PtOrdered[jet_LastSecIndex]
+                if btag_Flav == 'NJetsCSVwithSF_JetSubCalc': jet_LastSecBtagged = eventInProcTree.theJetBTag_JetSubCalc_PtOrdered[jet_LastSecIndex]
+
+                # jetsAlreadyDRd.append(jet_LastSecIndex)
+                magOfTwoJetsLVec = keptjet_lv.Dot(jet_LastSecLVec)
+                invMassWorG = math.sqrt(magOfTwoJetsLVec)
             else:
-                jet_flv = 3
-                uds_count += 1
-                flavStr = 'LiFlav'
+                if minjetdrPerEventCounter==0:
+                    print(kentry, jet_i, jet_flv)
+                print(jetsAlreadyDRd)
+                # sys.exit("No fill for this jet! I want to fill!!")
+                miniKeptJetToAllJets = -99
+                jet_LastSecFlav = 99
+                invMassWorG = -99
+            jetsAlreadyDRd.append(jet_i)
+
+            #  cc,ll,ww,bb,   cl,cb,cw, lc,lb,lw,  bc,bl,bw,  wc,wl,wb (10 variations)
+            # DR_Str = "Cflav"
+            if jet_flav==24 and jet_LastSecFlav==24: DR_Str='Wq_Wqflav'
+            elif jet_flav==24 and jet_LastSecFlav==4: DR_Str='Wq_cflav'
+            elif jet_flav!=24 and jet_flv==4 and jet_LastSecFlav==24: DR_Str='Wq_cflav'
+            elif jet_flav==24 and jet_LastSecFlav<4: DR_Str='Wq_Liflav'
+            elif jet_flav!=24 and jet_flv<4 and jet_LastSecFlav==24: DR_Str='Wq_Liflav'
+            elif jet_flav==24 and jet_LastSecFlav==5: DR_Str='Wq_bflav'
+            elif jet_flav!=24 and jet_flv==5 and jet_LastSecFlav==24: DR_Str='Wq_bflav'
+            elif jet_flav!=24 and jet_LastSecFlav!=24: DR_Str='gq_gqflav'
+            else:
+                miniKeptJetToAllJets = -99
+                print(jet_flv, jet_flav, jet_LastSecFlav)
+                # sys.exit("Unaccepatble flavours for this DR variable. Savvy??")
+
+            # if jet_flv==4 and jet_LastSecFlav<4: DR_Str='c_Liflav'
+            # elif jet_flv<4 and jet_LastSecFlav==4: DR_Str='c_Liflav'
+            # elif jet_flv==4 and jet_LastSecFlav==24: DR_Str = 'Wc_cflav'
+            # elif jet_flv==4 and jet_flav==24 and jet_LastSecFlav==4: DR_Str = 'Wc_cflav'
+            # elif jet_flv==4 and jet_LastSecFlav==5: DR_Str = 'c_bflav'
+            # elif jet_flv==5 and jet_LastSecFlav==4: DR_Str = 'c_bflav'
+            # elif jet_flav==24 and jet_flv==4 and jet_LastSecFlav<4: DR_Str='Wc_Liflav'
+            # elif jet_flv<4 and jet_LastSecFlav==24: DR_Str='Wc_Liflav'
+            # elif jet_flv==4 and jet_flav==24 and jet_LastSecFlav==5: DR_Str = 'Wc_bflav'
+            # elif jet_flv==5 and jet_LastSecFlav==24: DR_Str = 'Wc_bflav'
+            # elif jet_flv==5 and jet_LastSecFlav<4 : DR_Str = 'b_Liflav'
+            # elif jet_flv<4 and jet_LastSecFlav==5: DR_Str = 'b_Liflav'
+            # elif jet_flv==4 and jet_flav==24 and jet_LastSecFlav==24: DR_Str = 'Wc_Wcflav'
+            # elif jet_flv==4 and jet_LastSecFlav==4: DR_Str = 'c_cflav'
+            # elif jet_flv<4 and jet_LastSecFlav<4: DR_Str='Li_LiFlav'
+            # elif jet_flv==5 and jet_LastSecFlav==5: DR_Str='b_bFlav'
+            # else:
+            #     miniKeptJetToAllJets = -99
+            #     print(jet_flv, jet_flav, jet_LastSecFlav)
+            #     # sys.exit("Unaccepatble flavours for this DR variable. Savvy??")
 
             for denum in denumList:
                 histPostFixNew = histPostFix + denum
-                if denum == 'Numr' and numeratorBool == False: continue
+                if 'Numr' in denum:
+                    if jet_LastSecBtagged==False and jet_btagged == False: continue
+                if 'Data' not in process:
+                    if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, weightNum)
+                    if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, weightNum)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, weightNum)
+                        if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, weightNum)
+
+                    key2To3 = 'EstB2pTo3_'
+                    wEst = weightNum * probOneTag_2p
+                    if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEst)
+                    if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, wEst)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, wEst)
+                        if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, wEst)
+                    key2To4p = 'EstB2pTo4p_'
+                    wEst = weightNum * probMultiTag_2p
+                    if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEst)
+                    if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, wEst)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, wEst)
+                        if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, wEst)
+                    key2To3 = 'EstB2pTo3Up_'
+                    wEstUp = weightNum * (probOneTag_2p + probOneTagError_2p)
+                    if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstUp)
+                    if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, wEstUp)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, wEstUp)
+                        if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, wEstUp)
+                    key2To4p = 'EstB2pTo4pUp_'
+                    wEstUp = weightNum * (probMultiTag_2p + probMultiTag_Error_2p)
+                    if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstUp)
+                    if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, wEstUp)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, wEstUp)
+                        if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, wEstUp)
+                    key2To3 = 'EstB2pTo3Dn_'
+                    wEstDn = weightNum * (probOneTag_2p - probOneTagError_2p)
+                    if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstDn)
+                    if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, wEstDn)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, wEstDn)
+                        if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, wEstDn)
+                    key2To4p = 'EstB2pTo4pDn_'
+                    wEstDn = weightNum * (probMultiTag_2p - probMultiTag_Error_2p)
+                    if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstDn)
+                    if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, wEstDn)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, wEstDn)
+                        if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, wEstDn)
+                    # ------------------------------------------------------------------------------
+                    histPostFix2New = histPostFixPart + denum
+                    if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, weightNum)
+                    if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, weightNum)
+                    if 'TTJets' in process:
+                        if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, weightNum)
+                        if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, weightNum)
+                    if eventNBtag == 2:
+                        key2To3 = 'EstB2To3_'
+                        wEst = weightNum * w2bTo3b
+                        if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEst)
+                        if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, wEst)
+                        if 'TTJets' in process:
+                            if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, wEst)
+                            if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, wEst)
+                        key2To4p = 'EstB2To4p_'
+                        wEst = weightNum * w2bTo4bp
+                        if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEst)
+                        if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, wEst)
+                        if 'TTJets' in process:
+                            if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, wEst)
+                            if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, wEst)
+                        key2To3 = 'EstB2To3Up_'
+                        wEstUp = weightNum * (w2bTo3b + w2bTo3bError)
+                        if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstUp)
+                        if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, wEstUp)
+                        if 'TTJets' in process:
+                            if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, wEstUp)
+                            if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, wEstUp)
+                        key2To4p = 'EstB2To4pUp_'
+                        wEstUp = weightNum * (w2bTo4bp + w2bTo4bpError)
+                        if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstUp)
+                        if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, wEstUp)
+                        if 'TTJets' in process:
+                            if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, wEstUp)
+                            if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, wEstUp)
+                        key2To3 = 'EstB2To3Dn_'
+                        wEstDn = weightNum * (w2bTo3b - w2bTo3bError)
+                        if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstDn)
+                        if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, wEstDn)
+                        if 'TTJets' in process:
+                            if not miniKeptJetToAllJets == -99: hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, wEstDn)
+                            if not invMassWorG == -99: hists[key2To3 + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, wEstDn)
+                        key2To4p = 'EstB2To4pDn_'
+                        wEstDn = weightNum * (w2bTo4bp - w2bTo4bpError)
+                        if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstDn)
+                        if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, wEstDn)
+                        if 'TTJets' in process:
+                            if not miniKeptJetToAllJets == -99: hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, wEstDn)
+                            if not invMassWorG == -99: hists[key2To4p + 'KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, wEstDn)
+
+            for denum in denumList:
+                histPostFixNew = histPostFix + denum
+                if 'Numr' in denum and jet_btagged == False: continue
                 if denum == 'Numr': num_count += 1
                 if 'Data' not in process:
                     hists['KeptJetsPt' + histPostFixNew].Fill(jet_pt, weightNum)
-                    hists['KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, weightNum)
                     hists['KeptJetsEta' + histPostFixNew].Fill(jet_eta, weightNum)
                     hists['KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, weightNum)
                     hists['KeptJetsPtVsAbsEta' + histPostFixNew].Fill(jet_eta, jet_pt, weightNum)
                     hists['KeptJetsWeightProd' + histPostFixNew].Fill(abs(weightNum))
                     if 'TTJets' in process:
                         hists['KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, weightNum)
-                        hists['KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, weightNum)
                         hists['KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, weightNum)
                     if doAllSys:
                         for statT in statType:
@@ -719,74 +1041,60 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                     key2To3 = 'EstB2pTo3_'
                     wEst = weightNum * probOneTag_2p
                     hists[key2To3 + 'KeptJetsPt' + histPostFixNew].Fill(jet_pt, wEst)
-                    hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEst)
                     hists[key2To3 + 'KeptJetsEta' + histPostFixNew].Fill(jet_eta, wEst)
                     hists[key2To3 + 'KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, wEst)
                     if 'TTJets' in process:
                         hists[key2To3+'KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, wEst)
-                        hists[key2To3+'KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, wEst)
                         hists[key2To3+'KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, wEst)
                     key2To4p = 'EstB2pTo4p_'
                     wEst = weightNum * probMultiTag_2p
                     hists[key2To4p + 'KeptJetsPt' + histPostFixNew].Fill(jet_pt, wEst)
-                    hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEst)
                     hists[key2To4p + 'KeptJetsEta' + histPostFixNew].Fill(jet_eta, wEst)
                     hists[key2To4p + 'KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, wEst)
                     if 'TTJets' in process:
                         hists[key2To4p+'KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, wEst)
-                        hists[key2To4p+'KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, wEst)
                         hists[key2To4p+'KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, wEst)
                     key2To3 = 'EstB2pTo3Up_'
                     wEstUp = weightNum * (probOneTag_2p + probOneTagError_2p)
                     hists[key2To3 + 'KeptJetsPt' + histPostFixNew].Fill(jet_pt, wEstUp)
-                    hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstUp)
                     hists[key2To3 + 'KeptJetsEta' + histPostFixNew].Fill(jet_eta, wEstUp)
                     hists[key2To3 + 'KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, wEstUp)
                     if 'TTJets' in process:
                         hists[key2To3+'KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, wEstUp)
-                        hists[key2To3+'KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, wEstUp)
                         hists[key2To3+'KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, wEstUp)
                     key2To4p = 'EstB2pTo4pUp_'
                     wEstUp = weightNum * (probMultiTag_2p + probMultiTag_Error_2p)
                     hists[key2To4p + 'KeptJetsPt' + histPostFixNew].Fill(jet_pt, wEstUp)
-                    hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstUp)
                     hists[key2To4p + 'KeptJetsEta' + histPostFixNew].Fill(jet_eta, wEstUp)
                     hists[key2To4p + 'KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, wEstUp)
                     if 'TTJets' in process:
                         hists[key2To4p+'KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, wEstUp)
-                        hists[key2To4p+'KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, wEstUp)
                         hists[key2To4p+'KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, wEstUp)
                     key2To3 = 'EstB2pTo3Dn_'
                     wEstDn = weightNum * (probOneTag_2p - probOneTagError_2p)
                     hists[key2To3 + 'KeptJetsPt' + histPostFixNew].Fill(jet_pt, wEstDn)
-                    hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstDn)
                     hists[key2To3 + 'KeptJetsEta' + histPostFixNew].Fill(jet_eta, wEstDn)
                     hists[key2To3 + 'KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, wEstDn)
                     if 'TTJets' in process:
                         hists[key2To3+'KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, wEstDn)
-                        hists[key2To3+'KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, wEstDn)
                         hists[key2To3+'KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, wEstDn)
                     key2To4p = 'EstB2pTo4pDn_'
                     wEstDn = weightNum * (probMultiTag_2p - probMultiTag_Error_2p)
                     hists[key2To4p + 'KeptJetsPt' + histPostFixNew].Fill(jet_pt, wEstDn)
-                    hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, wEstDn)
                     hists[key2To4p + 'KeptJetsEta' + histPostFixNew].Fill(jet_eta, wEstDn)
                     hists[key2To4p + 'KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, wEstDn)
                     if 'TTJets' in process:
                         hists[key2To4p+'KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, wEstDn)
-                        hists[key2To4p+'KeptJetsDRtoAllJetsMin' + histPostFixNew + flavStr].Fill(miniKeptJetToAllJets, wEstDn)
                         hists[key2To4p+'KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, wEstDn)
                     # ------------------------------------------------------------------------------
                     histPostFix2New = histPostFixPart + denum
                     hists['KeptJetsPt' + histPostFix2New].Fill(jet_pt, weightNum)
-                    hists['KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, weightNum)
                     hists['KeptJetsEta' + histPostFix2New].Fill(jet_eta, weightNum)
                     hists['KeptJetsPtVsAbsEta' + histPostFix2New].Fill(jet_eta, jet_pt, weightNum)
                     hists['KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, weightNum)
                     hists['KeptJetsWeightProd' + histPostFix2New].Fill(abs(weightNum))
                     if 'TTJets' in process:
                         hists['KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, weightNum)
-                        hists['KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, weightNum)
                         hists['KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, weightNum)
                     if doAllSys:
                         for statT in statType:
@@ -797,62 +1105,50 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                         key2To3 = 'EstB2To3_'
                         wEst = weightNum * w2bTo3b
                         hists[key2To3 + 'KeptJetsPt' + histPostFix2New].Fill(jet_pt, wEst)
-                        hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEst)
                         hists[key2To3 + 'KeptJetsEta' + histPostFix2New].Fill(jet_eta, wEst)
                         hists[key2To3 + 'KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, wEst)
                         if 'TTJets' in process:
                             hists[key2To3 + 'KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, wEst)
-                            hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, wEst)
                             hists[key2To3 + 'KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, wEst)
                         key2To4p = 'EstB2To4p_'
                         wEst = weightNum * w2bTo4bp
                         hists[key2To4p + 'KeptJetsPt' + histPostFix2New].Fill(jet_pt, wEst)
-                        hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEst)
                         hists[key2To4p + 'KeptJetsEta' + histPostFix2New].Fill(jet_eta, wEst)
                         hists[key2To4p + 'KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, wEst)
                         if 'TTJets' in process:
                             hists[key2To4p + 'KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, wEst)
-                            hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, wEst)
                             hists[key2To4p + 'KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, wEst)
                         key2To3 = 'EstB2To3Up_'
                         wEstUp = weightNum * (w2bTo3b + w2bTo3bError)
                         hists[key2To3 + 'KeptJetsPt' + histPostFix2New].Fill(jet_pt, wEstUp)
-                        hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstUp)
                         hists[key2To3 + 'KeptJetsEta' + histPostFix2New].Fill(jet_eta, wEstUp)
                         hists[key2To3 + 'KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, wEstUp)
                         if 'TTJets' in process:
                             hists[key2To3 + 'KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, wEstUp)
-                            hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, wEstUp)
                             hists[key2To3 + 'KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, wEstUp)
                         key2To4p = 'EstB2To4pUp_'
                         wEstUp = weightNum * (w2bTo4bp + w2bTo4bpError)
                         hists[key2To4p + 'KeptJetsPt' + histPostFix2New].Fill(jet_pt, wEstUp)
-                        hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstUp)
                         hists[key2To4p + 'KeptJetsEta' + histPostFix2New].Fill(jet_eta, wEstUp)
                         hists[key2To4p + 'KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, wEstUp)
                         if 'TTJets' in process:
                             hists[key2To4p + 'KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, wEstUp)
-                            hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, wEstUp)
                             hists[key2To4p + 'KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, wEstUp)
                         key2To3 = 'EstB2To3Dn_'
                         wEstDn = weightNum * (w2bTo3b - w2bTo3bError)
                         hists[key2To3 + 'KeptJetsPt' + histPostFix2New].Fill(jet_pt, wEstDn)
-                        hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstDn)
                         hists[key2To3 + 'KeptJetsEta' + histPostFix2New].Fill(jet_eta, wEstDn)
                         hists[key2To3 + 'KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, wEstDn)
                         if 'TTJets' in process:
                             hists[key2To3 + 'KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, wEstDn)
-                            hists[key2To3 + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, wEstDn)
                             hists[key2To3 + 'KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, wEstDn)
                         key2To4p = 'EstB2To4pDn_'
                         wEstDn = weightNum * (w2bTo4bp - w2bTo4bpError)
                         hists[key2To4p + 'KeptJetsPt' + histPostFix2New].Fill(jet_pt, wEstDn)
-                        hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, wEstDn)
                         hists[key2To4p + 'KeptJetsEta' + histPostFix2New].Fill(jet_eta, wEstDn)
                         hists[key2To4p + 'KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, wEstDn)
                         if 'TTJets' in process:
                             hists[key2To4p + 'KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, wEstDn)
-                            hists[key2To4p + 'KeptJetsDRtoAllJetsMin' + histPostFix2New + flavStr].Fill(miniKeptJetToAllJets, wEstDn)
                             hists[key2To4p + 'KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, wEstDn)
                 else:
                     hists['KeptJetsPt' + histPostFixNew].Fill(jet_pt)
@@ -865,7 +1161,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 sysexitStr = "0. For some reason some are in an unknown region c-count=" + str(c_count) + "  b-count=" + str(bfg_count)
                 sys.exit(sysexitStr)
             eventAK4HT = eventInProcTree.AK4HT
-            secetaCount, subleadingEta = 0, None
+            secetaCount, subleadingEta = 0, 99
             nJetsTots = len(eventInProcTree.theJetPt_JetSubCalc_PtOrdered)
             for iinjets in range(1, nJetsTots):
                 if iinjets == firstRecoTopB_Indx: continue
@@ -1045,12 +1341,15 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 if jet_i == thirdHighBtag_Indx: continue
                 jet_pt = eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i]
                 jet_eta = abs(eventInProcTree.theJetEta_JetSubCalc_PtOrdered[jet_i])
-                jet_disc = eventInProcTree.AK4JetDeepCSVb_MultiLepCalc_PtOrdered[jet_i]
-                jet_disc += eventInProcTree.AK4JetDeepCSVbb_MultiLepCalc_PtOrdered[jet_i]
-                numeratorBool = False
-                if jet_disc > btag_discCut: numeratorBool = True
+                jet_flv = abs(eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_i])
+                jet_disc = btagvar[jet_i] + btagvarbb[jet_i]
+                if 'JetSubCalc' in btag_Flav: jet_disc = btagDeepJetvar[jet_i]
+                jet_btagged = False
+                if jet_disc > btag_discCut: jet_btagged = True
+                if btag_Flav == 'NJetsCSVwithSF_MultiLepCalc': jet_btagged = eventInProcTree.AK4JetBTag_MultiLepCalc_PtOrdered[jet_i]
+                if btag_Flav == 'NJetsCSVwithSF_JetSubCalc': jet_btagged = eventInProcTree.theJetBTag_JetSubCalc_PtOrdered[jet_i]
                 for denum in ['Denr', 'Numr']:
-                    if denum == 'Numr' and numeratorBool == False: continue
+                    if denum == 'Numr' and jet_btagged == False: continue
                     if 'Data' not in process:
                         hists[histPreFix + 'KeptJetsPt' + histPostFix + denum].Fill(jet_pt, weightNum)
                         hists[histPreFix + 'KeptJetsPt' + histPostFixPart + denum].Fill(jet_pt, weightNum)
@@ -1068,7 +1367,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         for denum in denumList:
             for jjPlot in plotNameList:
                 # if denum=='Numr' and jjPlot!='KeptJetsPt':  continue
-                for bCut in ['B' + nbtag, 'B2', 'B3', 'B4p']:
+                for bCut in btaglist:
                     histPostFixNew = histPostFix.replace('_nB' + nbtag, '_n' + bCut)
                     ingD1 = hists[jjPlot + histPostFixNew + denum].Integral()
                     ingSum = 0
@@ -1077,7 +1376,8 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                         if verbose > 1: print('bCut : ', bCut, '  cb number: ', cbtruthBinN, ' ingSum ;', ingSum)
                     if ingD1 == 0 and ingSum == 0: continue
                     if verbose > 2: print('bCut : ', bCut, '  0.  ingD1: ', ingD1, ', ingSum : ', ingSum)
-                    if abs(ingD1 - ingSum) > (zero * 1000):
+                    if abs(ingD1 - ingSum) > (zero * 10000):
+                        print('bCut : ', bCut, '  0.  ingD1: ', ingD1, ', ingSum : ', ingSum)
                         error_msg = 'cb the total and the sub-(cb-count) components are not equal in process : ' + process + '  ' + jjPlot + histPostFixNew + denum
                         sys.exit(error_msg)
                     else:
@@ -1086,18 +1386,19 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         for denum in denumList:
             for jjPlot in plotNameList:
                 # if denum=='Numr' and jjPlot!='KeptJetsPt':  continue
-                for bCut in ['B' + nbtag, 'B2', 'B3', 'B4p']:
+                for bCut in btaglist:
                     if verbose > 1: print(bCut)
                     histPostFixNew = histPostFix.replace('_nB' + nbtag, '_n' + bCut)
                     ingD1 = hists[jjPlot + histPostFixNew + denum].Integral()
                     ingSum = 0
                     if jjPlot == 'KeptJetsPt':
                         # if 'TTJets' not  in process: continue
-                        for flavType in ['Bflav', 'topBflav', 'Cflav', 'LiFlav']:
+                        for flavType in ['Bflav', 'topBflav', 'Cflav', 'LiFlav', 'WCflav','WLiFlav', 'WBflav']:
                             ingSum += hists[jjPlot + histPostFixNew + denum + flavType].Integral()
                         if ingD1 == 0 and ingSum == 0: continue
                         if verbose > 2: print('bCut : ', bCut, '  1. ingD1: ', ingD1, ', ingSum : ', ingSum)
-                        if abs(ingD1 - ingSum) > (zero * 1000):
+                        if abs(ingD1 - ingSum) > (zero * 10000):
+                            print('bCut : ', bCut, '  1. ingD1: ', ingD1, ', ingSum : ', ingSum)
                             error_msg = 'flav the total and the sub-flavour components for jetallPt are not equal in process : ' + process + '  ' + jjPlot + histPostFixNew + denum
                             sys.exit(error_msg)
                         else:

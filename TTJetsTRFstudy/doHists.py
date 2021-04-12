@@ -17,6 +17,7 @@ parser.add_argument('outdir', help='The directory to which we want the output of
 parser.add_argument('-v', '--verbose', action='count', default=0, help='Print more info')
 parser.add_argument('-P', '--iPlot', metavar='', default='JetallPt', help='Name of plot')
 parser.add_argument('-R', '--region', metavar='', default='PS', help='Region being selected')
+parser.add_argument('-YML', '--ymlInput', metavar='', default='plotList.yml', help='Yaml file with histogrmas')
 parser.add_argument('-Y', '--year', type=int, default=2017, metavar='', help='DAQ Year')
 parser.add_argument('-C', '--categorized', help='Is it categorised?', action='store_true')
 parser.add_argument('--isEM', nargs='+', choices=('E', 'M'), default=['E','M'], help='Lepton flavour')
@@ -26,11 +27,11 @@ parser.add_argument('--nttag', nargs='+', choices=('0','1p','0p'),
                     default=['0p'], help='Top tag multiplicity')
 parser.add_argument('--nWtag', nargs='+', choices=('0','1p','0p'),
                     default=['0p'], help='W-tag multiplicity')
-parser.add_argument('--nbtag', nargs='+', choices=('2p','3p','2','3', '4p'), default=['2p','3p'], help='B-tag Multiplicity')
+parser.add_argument('--nbtag', nargs='+', choices=('0p','2p','3p','2','3', '4p'), default=['2p'], help='B-tag Multiplicity')
 parser.add_argument('--btagType', metavar='', default='NJetsCSV_MultiLepCalc',
                     choices=('NJetsCSV_MultiLepCalc', 'NJetsCSVwithSF_MultiLepCalc', 'NJetsCSVwithSF_JetSubCalc', 'NJetsCSV_JetSubCalc'),
                     help='Btag algorithm being selected')
-parser.add_argument('--njets', nargs='+', choices=('4', '5', '6', '7', '8', '9', '10p', '5a6'),
+parser.add_argument('--njets', nargs='+', choices=('0p','4p','5p','6p','4', '5', '6', '7', '8', '9', '10p', '5a6'),
                     default=['5','6','7','8','9','10p'], help='Jet multiplicity')
 parser.add_argument('--doAllSys', help='Is it categorised?', action='store_true')
 indir_parser = parser.add_mutually_exclusive_group()
@@ -164,7 +165,7 @@ runBkgs = True
 runSigs = True
 
 cutList = {'elPtCut':20,'muPtCut':20,'metCut':60,'mtCut':60,'jet1PtCut':0,'jet2PtCut':0,'jet3PtCut':0,'AK4HTCut':510,
-           'btagType': argss.btagType, 'year': argss.year, 'lumiStr': lumiStr, 'printProdPlots': False}
+           'btagType': argss.btagType, 'year': argss.year, 'lumiStr': lumiStr, 'printProdPlots': False, 'do4TSLCriteria': True}
 cutString  = 'el'+str(int(cutList['elPtCut']))+'mu'+str(int(cutList['muPtCut']))
 cutString += '_MET'+str(int(cutList['metCut']))+'_MT'+str(cutList['mtCut'])
 cutString += '_1jet'+str(int(cutList['jet1PtCut']))+'_2jet'+str(int(cutList['jet2PtCut']))+str(int(cutList['jet3PtCut']))
@@ -208,16 +209,31 @@ def mkdirPath(outDirectory, pFix, cutStr, categoryDir, makeParent):
         if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
         outDirectory += '/' + categoryDir
         if not os.path.exists(outDirectory): os.system('mkdir ' + outDirectory)
+    print(outDirectory + ' has been made')
     return outDirectory
 
+
+def quoted_presenter(dumper, data):
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
+
+
+yaml.add_representer(str, quoted_presenter)
 
 from multiprocessing import Pool, cpu_count
 from functools import partial
 if __name__ == '__main__':
     # with open("doHists_plotList.json", "r") as read_file:
     #     plotList = json.load(read_file)
-    with open("plotList.yml") as read_file:
+    with open(argss.ymlInput) as read_file:
         plotList, backup = yaml.safe_load_all(read_file)
+
+    for cutkey in cutList:
+        backup[cutkey]=cutList[cutkey]
+
+    backup.update({'njets': argss.njets, 'nbtag': argss.nbtag, 'nWtag': argss.nWtag, 'nttag': argss.nttag, 'nhott': argss.nhott,
+                   'inputFile': step1Dir, 'whichSignal': whichSignal,'decays': decays, 'sigList': sigList, 'bkgList': bkgList,
+                   'dataList': dataList, 'hdampList': hdampList, 'ueList': ueList, 'runData': runData, 'runBkgs': runBkgs, 'runSigs': runSigs,
+                   'doAllSys': doAllSys, 'doHDsys': doHDsys, 'doUEsys': doUEsys, "plotsSaved": plotList.keys()})
 
     catList = list(itertools.product(argss.isEM,argss.nhott,argss.nttag,argss.nttag,argss.nbtag,argss.njets))
     nCats = len(catList)
@@ -240,6 +256,11 @@ if __name__ == '__main__':
                 del tTreeData[data]
         pickle.dump(datahists,open(outDir+'/datahists_'+iPlot+'.p','wb'))
         catInd+=1
+
+    with open(argss.outdir+'/'+pfix+'/'+argss.ymlInput, 'w') as write_file:
+        # yaml.dump(plotList,write_file)
+        yaml.dump(backup,write_file) # ,default_flow_style=False
+
 
     tTreeBkg = {}
     tFileBkg = {}

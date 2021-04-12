@@ -103,7 +103,9 @@ if doRealPull: doOneBand = False
 if compareShapes: blind, yLog, scaleSignals, sigScaleFact = True, False, False, -1
 zero = 1E-12
 
-tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
+if 'p' in argss.nbtag[0]: tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'_B'+argss.nbtag[0]+'.root' #
+else: tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'_B'+argss.nbtag[0]+'p.root'
+# tempsig='templates_'+'_'+lumiInTemplates+'fb'+isRebinned+'.root'
 if not os.path.exists(templateDir+tempsig):
     sys.exit("ERROR: File does not exits: "+templateDir+tempsig)
 print("READING: "+templateDir+tempsig)
@@ -244,10 +246,10 @@ if __name__ == '__main__':
             # print("  p-value =", prob_chi2, "CHI2/NDF", chi2, "/", ndof)
             print('*' * 80, '\n', '/' * 80)
 
-        hMCttjetsMerged, hMC2ttjetsMerged, xbinss = StatRebinHist(hMCttjetsMerged, hMC2ttjetsMerged, statVal, statType, onebin=False)
+        # hMCttjetsMerged, hMC2ttjetsMerged, xbinss = StatRebinHist(hMCttjetsMerged, hMC2ttjetsMerged, statVal, statType, onebin=False)
 
-        hMCttjetsMergedUp = hMCttjetsMergedUp.Rebin(len(xbinss) - 1, hMCttjetsMergedUp.GetName() + "reb", xbinss)
-        hMCttjetsMergedDn = hMCttjetsMergedDn.Rebin(len(xbinss) - 1, hMCttjetsMergedDn.GetName() + "reb", xbinss)
+        # hMCttjetsMergedUp = hMCttjetsMergedUp.Rebin(len(xbinss) - 1, hMCttjetsMergedUp.GetName() + "reb", xbinss)
+        # hMCttjetsMergedDn = hMCttjetsMergedDn.Rebin(len(xbinss) - 1, hMCttjetsMergedDn.GetName() + "reb", xbinss)
 
         if argss.verbose > 0:
             print('/' * 80, '\n', '*' * 80)
@@ -377,6 +379,7 @@ if __name__ == '__main__':
         pltr.L = 1.2 * pltr.L
         pltr.R = 0.2 * pltr.R
         pltr.T = 0.9 * pltr.T
+        pltr.setlogy = argss.yLog
         pltr.h2 = hMCttjetsMerged
         pltr.h1 = hMC2ttjetsMerged
         pltr.err2 = h1error

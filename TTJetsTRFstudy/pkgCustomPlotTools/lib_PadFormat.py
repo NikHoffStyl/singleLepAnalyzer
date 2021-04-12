@@ -3,11 +3,11 @@ doRealPull = False
 yLog=False
 
 
-def formatUpperHist(histogramList):
+def formatUpperHist(histogramList, uPad, ylog=False):
     for histogram in histogramList:
         histogram.GetXaxis().SetLabelSize(0)
         histogram.GetXaxis().SetNdivisions(506)
-        if 'Pt' in  histogram.GetName(): histogram.GetXaxis().SetRangeUser(30, 312.0)
+        # if 'Pt' in  histogram.GetName(): histogram.GetXaxis().SetRangeUser(30, 312.0)
         # if 'Eta' in histogram.GetName():
         # 	histogram.GetXaxis().SetRangeUser(-2.1, 2.1)
         # if 'DR' in histogram.GetName():
@@ -47,7 +47,7 @@ def formatUpperHist(histogramList):
             mList.append(hist.GetMaximum())
         if max(mList)!=0: histogram.SetMaximum(1.5 * max(mList))
         else: histogram.SetMaximum(50)
-        if yLog:
+        if ylog:
             uPad.SetLogy()
             histogram.SetMaximum(2e3*max(mList))
             histogram.SetMinimum(0.015)
@@ -59,9 +59,9 @@ def formatMidHist(histogramList):
         if 'NTJets' in histogram.GetName(): histogram.GetXaxis().SetNdivisions(5)
         elif 'NWJets' in histogram.GetName(): histogram.GetXaxis().SetNdivisions(5)
         elif 'NBJets' in histogram.GetName(): histogram.GetXaxis().SetNdivisions(6,rt.kFALSE)
-        if 'Pt' in  histogram.GetName(): histogram.GetXaxis().SetRangeUser(30, 265.0)
-        if 'Eta' in histogram.GetName():
-            histogram.GetXaxis().SetRangeUser(-2.1, 2.1)
+        # if 'Pt' in  histogram.GetName(): histogram.GetXaxis().SetRangeUser(30, 265.0)
+        # if 'Eta' in histogram.GetName():
+        #     histogram.GetXaxis().SetRangeUser(-2.1, 2.1)
         if 'DR' in histogram.GetName():
                 histogram.GetXaxis().SetRangeUser(0.5, 4)
         else:
@@ -99,7 +99,7 @@ def formatLowerHist(histogramList,disc, tagl, nbinx):
         histogram.GetXaxis().SetTitleSize(0.15)
         histogram.GetXaxis().SetTitleOffset(0.95)
         histogram.GetXaxis().SetNdivisions(506)
-        histogram.GetXaxis().SetRange(1, nbinx)
+        # histogram.GetXaxis().SetRange(1, nbinx)
         # if 'Pt' in  histogram.GetName():
         # 	histogram.GetXaxis().SetRangeUser(20,450)
         # if 'Eta' in histogram.GetName():
@@ -123,6 +123,7 @@ def formatLowerHist(histogramList,disc, tagl, nbinx):
             if nh == 0: continue
             minList.append(hist.GetMinimum())
         miny = 0.6 * min(minList)
+        miny = max(miny, 0.4)
         histogram.SetMinimum(miny)
 
         mList = [histogram.GetMaximum()]
@@ -130,6 +131,7 @@ def formatLowerHist(histogramList,disc, tagl, nbinx):
             if nh == 0: continue
             mList.append(hist.GetMaximum())
         maxy = 1.2 * max(mList)
+        maxy = min(maxy, 1.6)
         histogram.SetMaximum(max(0.055, maxy))
         if doRealPull:
             histogram.GetYaxis().SetRangeUser(min(-2.99, 0.8 * histogram.GetBinContent(histogram.GetMaximumBin())),

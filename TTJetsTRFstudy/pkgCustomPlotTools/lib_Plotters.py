@@ -1,3 +1,5 @@
+from __future__ import print_function, division
+
 import ROOT as rt
 from pkgCustomPlotTools.lib_PadFormat import *
 import os, sys, math, json
@@ -30,6 +32,7 @@ class Plotter(object):
         self.lumi_13TeV           = "20.1 fb^{-1}"
         self.lumi_sqrtS           = ""
         self.drawLogo             = False
+        self.setlogy              = False
 
         self.iPos                 = 11
         self.tag                  = [''] * 6
@@ -128,26 +131,33 @@ class Plotter(object):
         uPad.cd()
 
         if self.h2 is not None:
-            if self.h1 is not None: formatUpperHist([self.h2, self.h1])
-            else: formatUpperHist([self.h2])
+            if self.h1 is not None: formatUpperHist([self.h2, self.h1], uPad, self.setlogy)
+            else: formatUpperHist([self.h2], uPad, self.setlogy)
             if self.plotLowerPad: histTitleAndLabelSettings(self.h2, 0)  # corrections
             else: histTitleAndLabelSettings(self.h2, 1)
             self.h2.Draw("hist" + self.hDrawText)
         if self.h1 is not None:
             if self.h2 is None:
-                formatUpperHist([self.h1])
+                formatUpperHist([self.h1],uPad, self.setlogy)
                 if self.plotLowerPad: histTitleAndLabelSettings(self.h1, 0)  # corrections
                 else: histTitleAndLabelSettings(self.h1, 1)
                 self.h1.Draw("hist" + self.hDrawText)
             else:
                 self.h1.Draw(" same hist")
         if self.s1 is not None: self.s1.Draw("same hist")
-        if self.h2 is not None: self.h2.Draw("same hist")
-        if self.h1 is not None: self.h1.Draw(" same hist")
         if self.h1 is not None:
+            self.h1.Draw(" same hist")
             if self.err1 is not None: self.err1.Draw(" E2")
         if self.h2 is not None:
+            self.h2.Draw("same hist")
             if self.err2 is not None: self.err2.Draw(" E2")
+        if self.h1 is not None:
+            self.h1.Draw(" same hist")
+        if len(self.hDrawn) !=0:
+            if self.h1 is not None:
+                self.h1.SetMaximum(1.3 * max(self.h1.GetMaximum(), max( [self.hDrawn[x].GetMaximum() for x in range(0, len(self.hDrawn))])))
+            if self.h2 is not None:
+                self.h2.SetMaximum(1.3 * max(self.h2.GetMaximum(), max( [self.hDrawn[x].GetMaximum() for x in range(0, len(self.hDrawn))])))
         for h_indx in range(0, len(self.hDrawn)):
             self.hDrawn[h_indx].Draw('same hist')
 
@@ -160,7 +170,17 @@ class Plotter(object):
         histListTemp = [self.h1,self.h2]  + self.hDrawn
         histCountL += len(histListTemp) - histListTemp.count(None)
         legY1 = 0.87-histCountL*0.064   # i.e.  0.55 for 5  elements
-        leg = rt.TLegend(0.7, legY1, 0.97, 0.87)
+        legList = []
+        if self.h1LegEntry is not None: legList += [self.h1LegEntry]
+        if self.h2LegEntry is not None: legList += [self.h2LegEntry]
+        if len(self.hDrawnLegEntry) != 0: legList += self.hDrawnLegEntry
+
+        if len(legList) != 0: longXLeg = any([len(x) > 19 for x in legList])
+        else: longXLeg = False
+
+        if longXLeg: legX1 = 0.6
+        else: legX1 = 0.7
+        leg = rt.TLegend(legX1, legY1, 0.97, 0.87)
         leg.SetShadowColor(0)
         leg.SetFillColor(0)
         leg.SetFillStyle(0)
@@ -205,109 +225,110 @@ class Plotter(object):
 
             pull = self.h1.Clone("pull")
             self.h1.Sumw2()
-            self.h2.Sumw2()
-            pull.Divide(self.h1, self.h2, 1, 1, "B")
+            if self.h2 is not None:
+                self.h2.Sumw2()
+                pull.Divide(self.h1, self.h2, 1, 1, "B")
+                if self.printRatioTxt:
+                    with open(self.ratioFileName, 'w') as ratioFile:
+                        pullContentList = []
+                        pullErrorList = []
+                        pullXAxisList = []
+                        # listOfTuples = []
+                        print("\n      WRITTING TO MCeff " + self.ratioFileName + " \n")
+                        ratioFile.write("\n MCstack \n")
+                        pullXAxisLowEdgeLists = []
+                        for bini in range(1, pull.GetNbinsX() + 1):
+                            p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
+                            p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
+                            p_binCont = pull.GetBinContent(bini)
+                            pullContentList.append(p_binCont)
+                            p_binError = pull.GetBinError(bini)
+                            pullErrorList.append(p_binError)
+                            pullXAxisList.append(p_lowEdge + ((p_highEdge - p_lowEdge) / 2))
+                            pullXAxisLowEdgeLists.append(p_lowEdge)
+                            if bini == 1:
+                                sfbin = '        if  jetPT < ' + str(p_highEdge) + ' : \n'
+                            elif bini == pull.GetNbinsX():
+                                sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' : \n'
+                            else:
+                                sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' and jetPT < ' + str(
+                                    p_highEdge) + ' : \n'
+                            if self.tag[3] == '2p':
+                                sfbin += '            effJet.append(' + str(p_binCont) + ') \n'
+                                sfbin += '            effJet_error.append(' + str(p_binError) + ') \n'
+                            else:
+                                sfbin += '            effJet_b3p.append(' + str(p_binCont) + ') \n'
+                                sfbin += '            effJet_error_b3p.append(' + str(p_binError) + ') \n'
+                            ratioFile.write(sfbin)
+                            # listOfTuples.append([(p_lowEdge, p_highEdge),(0,5),(p_binCont, p_binError)])
+                        ratioFile.write('x =' + str(pullXAxisList) + '\n')
+                        ratioFile.write('y =' + str(pullContentList) + '\n')
+                        ratioFile.write('dy =' + str(pullErrorList) + '\n')
+                        ratioFile.write('lowx = ' + str(pullXAxisLowEdgeLists) + '\n')
+                        # ratioFile.write('listsOfTuples = '+ str(listOfTuples)+'\n')
+                        del pullXAxisList[:]
+                        del pullContentList[:]
+                        del pullErrorList[:]
+                        # del listOfTuples[:]
+                    dumpHistToJSON(self.ratioJSONfileName, pull, None)
 
-            if self.printRatioTxt:
-                with open(self.ratioFileName, 'w') as ratioFile:
-                    pullContentList = []
-                    pullErrorList = []
-                    pullXAxisList = []
-                    # listOfTuples = []
-                    print("\n      WRITTING TO MCeff " + self.ratioFileName + " \n")
-                    ratioFile.write("\n MCstack \n")
-                    pullXAxisLowEdgeLists = []
-                    for bini in range(1, pull.GetNbinsX() + 1):
-                        p_lowEdge = pull.GetXaxis().GetBinLowEdge(bini)
-                        p_highEdge = (p_lowEdge + pull.GetXaxis().GetBinWidth(bini))
-                        p_binCont = pull.GetBinContent(bini)
-                        pullContentList.append(p_binCont)
-                        p_binError = pull.GetBinError(bini)
-                        pullErrorList.append(p_binError)
-                        pullXAxisList.append(p_lowEdge + ((p_highEdge - p_lowEdge) / 2))
-                        pullXAxisLowEdgeLists.append(p_lowEdge)
-                        if bini == 1:
-                            sfbin = '        if  jetPT < ' + str(p_highEdge) + ' : \n'
-                        elif bini == pull.GetNbinsX():
-                            sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' : \n'
-                        else:
-                            sfbin = '        elif  jetPT >= ' + str(p_lowEdge) + ' and jetPT < ' + str(
-                                p_highEdge) + ' : \n'
-                        if self.tag[3] == '2p':
-                            sfbin += '            effJet.append(' + str(p_binCont) + ') \n'
-                            sfbin += '            effJet_error.append(' + str(p_binError) + ') \n'
-                        else:
-                            sfbin += '            effJet_b3p.append(' + str(p_binCont) + ') \n'
-                            sfbin += '            effJet_error_b3p.append(' + str(p_binError) + ') \n'
-                        ratioFile.write(sfbin)
-                        # listOfTuples.append([(p_lowEdge, p_highEdge),(0,5),(p_binCont, p_binError)])
-                    ratioFile.write('x =' + str(pullXAxisList) + '\n')
-                    ratioFile.write('y =' + str(pullContentList) + '\n')
-                    ratioFile.write('dy =' + str(pullErrorList) + '\n')
-                    ratioFile.write('lowx = ' + str(pullXAxisLowEdgeLists) + '\n')
-                    # ratioFile.write('listsOfTuples = '+ str(listOfTuples)+'\n')
-                    del pullXAxisList[:]
-                    del pullContentList[:]
-                    del pullErrorList[:]
-                    # del listOfTuples[:]
-                dumpHistToJSON(self.ratioJSONfileName, pull, None)
+                for binNo in range(1, self.h2.GetNbinsX() + 1):
+                    binLbl = binNo - 1
+                    if binNo < 1:
+                        pull.SetBinContent(binNo, 0.00)
+                    if self.h2.GetBinContent(binNo) != 0:
+                        pull.SetBinError(binNo, self.h1.GetBinError(binNo) / self.h2.GetBinContent(binNo))  # set ratio error, Keep This!
+                lowerPullMList = [pull]
+                print('pull.GetMaximum(): ', pull.GetMaximum())
+                formatLowerHist(lowerPullMList, self.iPlot, self.tag[3][:-1], self.h2.GetNbinsX())
+                # histTitleAndLabelSettings(pull, 1)
+                pull.SetLineColor(rt.kBlue)
+                pull.SetMarkerStyle(20)
+                pull.SetMarkerSize(1.2)
+                pull.SetMarkerColor(rt.kBlue)
+                pull.SetLineWidth(2)
+                pull.GetYaxis().SetTitle(self.pullYTitle)
 
-            for binNo in range(1, self.h2.GetNbinsX() + 1):
-                binLbl = binNo - 1
-                if binNo < 1:
-                    pull.SetBinContent(binNo, 0.00)
-                if self.h2.GetBinContent(binNo) != 0:
-                    pull.SetBinError(binNo,
-                                     self.h1.GetBinError(binNo) / self.h2.GetBinContent(binNo))  # set ratio error, Keep This!
-            lowerPullMList = [pull]
-            print('pull.GetMaximum(): ', pull.GetMaximum())
-            formatLowerHist(lowerPullMList, self.iPlot, self.tag[3][:-1], self.h2.GetNbinsX())
-            # histTitleAndLabelSettings(pull, 1)
-            pull.SetLineColor(rt.kBlue)
-            pull.SetMarkerStyle(20)
-            pull.SetMarkerSize(1.2)
-            pull.SetMarkerColor(rt.kBlue)
-            pull.SetLineWidth(2)
-            pull.GetYaxis().SetTitle(self.pullYTitle)
+                pBinList = []
+                for pullIndx in range(0, pull.GetNbinsX() + 1):
+                    binCnt = pull.GetBinContent(pullIndx)
+                    binErr = pull.GetBinError(pullIndx)
+                    if binErr < (0.5 * binCnt) and binCnt != 0:
+                        pBinList.append(pullIndx)
+                if pBinList:
+                    normTRF = pull.Integral(pBinList[0], pBinList[len(pBinList) - 1],
+                                            'width')  # Kept for use  if someone asks
+                    print('normTRF ====' + str(normTRF))
+                    print(' bin1 ==== ' + str(pBinList[0]))
+                    print(' binLast ==== ' + str(pBinList[len(pBinList) - 1]))
+                    pullListContents = []
+                    for binNo in range(pBinList[0], pBinList[len(pBinList) - 1]):
+                        pullListContents.append(pull.GetBinContent(binNo))
+                    if len(pBinList) < 1:
+                        print(' maxTRF ====' + str(max(pullListContents)))
 
-            pBinList = []
-            for pullIndx in range(0, pull.GetNbinsX() + 1):
-                binCnt = pull.GetBinContent(pullIndx)
-                binErr = pull.GetBinError(pullIndx)
-                if binErr < (0.5 * binCnt) and binCnt != 0:
-                    pBinList.append(pullIndx)
-            if pBinList:
-                normTRF = pull.Integral(pBinList[0], pBinList[len(pBinList) - 1],
-                                        'width')  # Kept for use  if someone asks
-                print('normTRF ====' + str(normTRF))
-                print(' bin1 ==== ' + str(pBinList[0]))
-                print(' binLast ==== ' + str(pBinList[len(pBinList) - 1]))
-                pullListContents = []
-                for binNo in range(pBinList[0], pBinList[len(pBinList) - 1]):
-                    pullListContents.append(pull.GetBinContent(binNo))
-                if len(pBinList) < 1:
-                    print(' maxTRF ====' + str(max(pullListContents)))
+                BkgOverBkg = pull.Clone("bkgOverbkg")
+                pullUncBandNorm = rt.TGraphAsymmErrors(BkgOverBkg.Clone("pulluncTot"))
+                for binNo in range(0, self.h1.GetNbinsX() + 2):
+                    if len(pBinList) < 2 and binNo != 0: continue
+                    if self.h2.GetBinContent(binNo) != 0:
+                        if self.err2 is None: self.err2 = self.err1
+                        if self.err1 is None: self.err1 = self.err2
+                        errY = (max(max(self.err1.GetErrorYhigh(binNo - 1), zero) * (max(self.h1.GetBinContent(binNo), zero) / ((max(self.h2.GetBinContent(binNo), zero)) ** 2)) , 0.001) ** 2) + (max(max(self.err2.GetErrorYhigh(binNo - 1),zero) * (max(1 / self.h2.GetBinContent(binNo), zero)), 0.001) ** 2)
+                        # print(errY)
+                        errY = math.sqrt(min(errY, 0.03)) #
+                        pullUncBandNorm.SetPointEYhigh(binNo - 1, errY)
+                        pullUncBandNorm.SetPointEYlow(binNo - 1, errY)
+                pullUncBandNorm.SetFillStyle(3001)
+                pullUncBandNorm.SetFillColor(1)
+                pullUncBandNorm.SetLineColor(1)
+                pullUncBandNorm.SetMarkerSize(0)
+                rt.gStyle.SetHatchesLineWidth(1)
 
-            BkgOverBkg = pull.Clone("bkgOverbkg")
-            pullUncBandNorm = rt.TGraphAsymmErrors(BkgOverBkg.Clone("pulluncTot"))
-            for binNo in range(0, self.h1.GetNbinsX() + 2):
-                if len(pBinList) < 2 and binNo != 0: continue
-                if self.h2.GetBinContent(binNo) != 0:
-                    if self.err2 is None: self.err2 = self.err1
-                    if self.err1 is None: self.err1 = self.err2
-                    errY = (max(max(self.err1.GetErrorYhigh(binNo - 1), zero) * (max(self.h1.GetBinContent(binNo), zero) / ((max(self.h2.GetBinContent(binNo), zero)) ** 2)) , 0.001) ** 2) + (max(max(self.err2.GetErrorYhigh(binNo - 1),zero) * (max(1 / self.h2.GetBinContent(binNo), zero)), 0.001) ** 2)
-                    # print(errY)
-                    errY = math.sqrt(min(errY, 0.03)) #
-                    pullUncBandNorm.SetPointEYhigh(binNo - 1, errY)
-                    pullUncBandNorm.SetPointEYlow(binNo - 1, errY)
-            pullUncBandNorm.SetFillStyle(3001)
-            pullUncBandNorm.SetFillColor(1)
-            pullUncBandNorm.SetLineColor(1)
-            pullUncBandNorm.SetMarkerSize(0)
-            rt.gStyle.SetHatchesLineWidth(1)
+                pull.Draw("hist E1")
+                pullUncBandNorm.Draw("SAME E2")
 
-            pull.Draw("hist E1")
-            pullUncBandNorm.Draw("SAME E2")
+
 
             lPad.Update()
             pullLegend = rt.TLegend(0.15, 0.8, 0.85, 0.94)
@@ -426,9 +447,10 @@ def histTitleAndLabelSettings(histogram, setIndx):
 
 
 def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histNameTemp='', verbose=False, _tS='',
-                              _preStr='', _doFlav=True, _doBCTruth=True):
+                              _preStr='', _doFlav=True, _doBCTruth=True, _FlavList=None):
     """
 
+    :param _FlavList:
     :param _hOut:
     :param _inputFiles:
     :param _procList:
@@ -440,6 +462,8 @@ def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histName
     :param _doBCTruth:
     :return:
     """
+    if _FlavList is None:
+        _FlavList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav']
     if _inputFiles is None: raise FileNotFoundError('input file required but not provided')
     if _procList is None: raise ValueError('_procList required but not provide')
 
@@ -471,7 +495,7 @@ def mergeEMhistogramsFromFile(_hOut, _inputFiles=None, _procList=None, _histName
                 print("There is no " +_preStr + proc+'isL'+_tS + " in input file!!! Skipping it.....")
             pass
         totProcMergedSub = 0.
-        for flavType in ['Bflav', 'topBflav', 'Cflav', 'LiFlav']:
+        for flavType in _FlavList:
             if not _doFlav: continue
             histFromFile = _inputFiles.Get(_preStr +_histNameList[0] + flavType)
             if histFromFile:

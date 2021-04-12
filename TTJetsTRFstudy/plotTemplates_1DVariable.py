@@ -27,8 +27,8 @@ parser.add_argument('--nttag', nargs='+', choices=('0','1p','0p'),
                     default=None, help='Top tag multiplicity')
 parser.add_argument('--nWtag', nargs='+', choices=('0','1p','0p'),
                     default=None, help='W-tag multiplicity')
-parser.add_argument('--nbtag', nargs='+', choices=('2p','3p','2','3', '4p'), default=None, help='B-tag Multiplicity')
-parser.add_argument('--njets', nargs='+', choices=('4', '5', '6', '7', '8', '9', '10p', '5a6'),
+parser.add_argument('--nbtag', nargs='+', choices=('0p','2p','3p','2','3', '4p'), default=None, help='B-tag Multiplicity')
+parser.add_argument('--njets', nargs='+', choices=('0p','4p','5p','6p','4', '5', '6', '7', '8', '9', '10p', '5a6'),
                     default=None, help='Jet multiplicity')
 parser.add_argument('--doAllSys', help='Do all systematics?', action='store_true')
 parser.add_argument('--addCRsys', help='Add control region systematics?', action='store_true')
@@ -42,6 +42,9 @@ parser.add_argument('--drawYields', help='', action='store_true')
 parser.add_argument('--drawFlav', help='Draw flavour histograms', action='store_true')
 parser.add_argument('--drawHVcount', help='Draw c-b-flavour ', action='store_true')
 parser.add_argument('--btagR', metavar='', default=None, help='Variable Name')
+parser.add_argument('--flavList', nargs='+', default=None, help='flavour List')
+parser.add_argument('-reb', '--rebined', help='rebined?', action='store_true')
+
 
 bkgChoice_parser = parser.add_mutually_exclusive_group()
 bkgChoice_parser.add_argument('--showAllTtGroups', help='Program will show ttjj, ttcc, tt1b, tt1b, ttbb ', action='store_true')
@@ -50,11 +53,13 @@ bkgChoice_parser.add_argument('--showTwoTtGroups', help='Program will show ttoth
 functionChoice_parser = parser.add_mutually_exclusive_group()
 functionChoice_parser.add_argument('--plotRecoVsTruth1D', help='Plot Reco vs Truth 1D ', action='store_true')
 functionChoice_parser.add_argument('--plotRecoVsTruth2D', help='Plot Reco vs Truth 2D ', action='store_true')
+functionChoice_parser.add_argument('--plot2DFlav', help='Plot 2D plots and 2D flavour optional ', action='store_true')
 functionChoice_parser.add_argument('--getJetFlavJson', help='Plot jet Flavour value and output to json', action='store_true')
 functionChoice_parser.add_argument('--getProcIntegralsJson', help='Save process Integral to json for later use (currently for PieCharts)', action='store_true')
 functionChoice_parser.add_argument('--plot1DFlav', help='Plot 1d no Ratio plot with flavour histograms stacked', action='store_true')
 functionChoice_parser.add_argument('--plot1DHvFlav', help='Plot 1d no Ratio plot with c-b-multiplicity-bin-flavour histograms stacked', action='store_true')
 functionChoice_parser.add_argument('--plotTTJets', help='Plot 1d no Ratio plot with TTJets-process histograms stacked', action='store_true')
+functionChoice_parser.add_argument('--plotShapesComp', help='Plot jet Flavour value and output to json', action='store_true')
 functionChoice_parser.add_argument('--getKeptJetsPtJson', help='Plot jet Flavour value and output to json', action='store_true')
 
 
@@ -110,12 +115,18 @@ ttProcList = ['ttnobb','ttbb']
 ttbarProcList = ['ttjj','ttcc','ttbb','tt1b','tt2b']
 bkgProcList = ttProcList#+['top','ewk','qcd']
 bkgHistColors = {'tt2b':rt.kRed+3,'tt1b':rt.kRed-3,'ttbj':rt.kRed+3,'ttbb':rt.kRed,'ttcc':rt.kRed-5,'ttjj':rt.kRed-7,'ttnobb':rt.kRed-7,'top':rt.kBlue,'ewk':rt.kMagenta-2,'qcd':rt.kOrange+5,'ttbar':rt.kRed} #4T
-genflavColors = {'Bflav':rt.kBlue-7, 'topBflav': rt.kBlue, 'Cflav':rt.kAzure+2, 'LiFlav':rt.kCyan, 'Bin4_':rt.kBlue-7, 'Bin3_': rt.kBlue, 'Bin2_':rt.kAzure+2, 'Bin1_':rt.kCyan}
-genflavLegend = {'Bflav':'b from g', 'topBflav': 'b from t', 'Cflav':'c-jet', 'LiFlav':'u/d/s-jet',
+genflavColors = {'Bflav':rt.kBlue-7, 'topBflav': rt.kBlue, 'WCflav':rt.kRed+2, 'Cflav':rt.kAzure+2, 'LiFlav':rt.kMagenta+2, 'WBflav':rt.kRed-7, 'WLiFlav':rt.kOrange+5,
+                 'Bin4_':rt.kBlue-7, 'Bin3_': rt.kBlue, 'Bin2_':rt.kAzure+2, 'Bin1_':rt.kCyan,
+                 'Wq_Wqflav':rt.kBlue, 'Wq_cflav':rt.kRed-7,'Wq_bflav':rt.kRed,'Wq_Liflav':rt.kRed+3, 'gq_gqflav':rt.kMagenta-2,
+                 'c_Liflav':rt.kRed-7, 'Wc_cflav':rt.kRed, 'c_bflav':rt.kRed+2, 'Wc_Liflav':rt.kBlue+2, 'Wc_bflav':rt.kBlue, 'Wc_Wcflav':rt.kBlue-7, 'c_cflav':rt.kRed+3, 'Li_LiFlav':rt.kOrange, 'b_bFlav':rt.kMagenta-2, 'b_Liflav':rt.kMagenta+4}
+genflavLegend = {'Bflav':'b-jet (g#rightarrow q#bar{q}) ', 'topBflav': 'b-jet (t#rightarrow b W) ', 'Cflav':'c-jet (g#rightarrow q#bar{q}) ', 'LiFlav':'u/d/s/g-jet (g#rightarrow q#bar{q})', 'WCflav':'c-jet (W#rightarrow q#bar{q})','WBflav':'b-jet (W#rightarrow q#bar{q})','WLiFlav':'u/d/s-jet (W#rightarrow q#bar{q})',
                  'Bin1_': 'c=0, b=0','Bin2_':'c=1, b=0','Bin3_': 'c>1, b#geq0','Bin4_':'c#geq1, b>0',
+                 'Wq_Wqflav':'W #rightarrow 2q-jets', 'Wq_cflav':'W #rightarrow q-jet, c-jet','Wq_bflav':'W #rightarrow q-jet, b-jet','Wq_Liflav':'W #rightarrow q-jet, LF-jet', 'gq_gqflav':'g #rightarrow 2q-jets',
+                 'c_Liflav':'#DeltaR_{min}(c and LF-jet)', 'Wc_cflav':'#DeltaR_{min}(W->c and c-jet)', 'c_bflav':'#DeltaR_{min}(c and b-jet)', 'Wc_Liflav':'#DeltaR_{min}(W->c and LF-jet)', 'Wc_bflav':'#DeltaR_{min}(W->c and b-jet)', 'Wc_Wcflav':'#DeltaR_{min}(W->c jets)', 'c_cflav':'#DeltaR_{min}(c jets)', 'Li_LiFlav':'#DeltaR_{min}(LF-jets)', 'b_bFlav':'#DeltaR_{min}(b-jets)', 'b_Liflav':'#DeltaR_{min}(b and LF-jet)',
                  'tt2b':'tt2b', 'tt1b': 'tt1b', 'ttbj': 'ttbj', 'ttbb': 'ttbb', 'ttcc': 'ttcc', 'ttjj': 'ttjj', 'ttnobb': 'tt-other', 'top': 'top', 'ewk': 'EWK', 'qcd': 'QCD', 'ttbar': 't#bar{t}'}
 systematicList = ['pileup','prefire','muRFcorrd','muR','muF','isr','fsr']
 yLog  = argss.yLog
+print("yLog: ", yLog)
 blind = argss.blind
 doAllSys = argss.doAllSys
 addCRsys = argss.addCRsys
@@ -147,6 +158,7 @@ trigSys = 0.0  # trigger uncertainty
 lepIdSys = 0.03  # lepton id uncertainty
 lepIsoSys = 0.0  # lepton isolation uncertainty
 corrdSys = math.sqrt(lumiSys**2+trigSys**2+lepIdSys**2+lepIsoSys**2) #cheating while total e/m values are close
+btagString = 'DeepCSV'
 for tag in tagList:
     tagStr='nT'+tag[0]+'_nW'+tag[1]+'_nB'+tag[2]+'_nJ'+tag[3]
     modTag = tagStr[tagStr.find('nT'):tagStr.find('nJ')-3]
@@ -168,15 +180,31 @@ def getNormUnc(hist,ibin,modelingUnc):
 def make_ttinclusive(histDictionary_=None, addTxt_='', subprocList=None):
     if histDictionary_ is None: raise ValueError('histDictionary_ required but not provided')
     if subprocList is None: raise ValueError('subprocList required but not provided')
-
-    hout = histDictionary_['ttbb' + 'isL' + addTxt_].Clone("ttisL" + addTxt_)
-    if 'ttbb' in subprocList:
-        new_subprocList = subprocList[:]
-        new_subprocList.remove('ttbb')
-    for subProc in new_subprocList:
-        if 'tt' not in subProc: continue
-        hout.Add(histDictionary_[subProc + 'isL' + addTxt_])
+    hout=None
+    print(histDictionary_.keys())
+    if 'ttbb' + 'isL' + addTxt_ in  histDictionary_.keys():
+        hout = histDictionary_['ttbb' + 'isL' + addTxt_].Clone("ttisL" + addTxt_)
+        if 'ttbb' in subprocList:
+            new_subprocList = subprocList[:]
+            new_subprocList.remove('ttbb')
+        for subProc in new_subprocList:
+            if 'tt' not in subProc: continue
+            hout.Add(histDictionary_[subProc + 'isL' + addTxt_])
+    else:
+        print("ttbb did not exist for "+ addTxt_)
+        if 'ttnobb' + 'isL' + addTxt_ in  histDictionary_.keys():
+            hout = histDictionary_['ttnobb' + 'isL' + addTxt_].Clone("ttisL" + addTxt_)
+    print(addTxt_)
     hout.SetDirectory(0)
+    oldtitleX = hout.GetXaxis().GetTitle()
+    newtitleX = oldtitleX.replace("Kept", "")
+    newtitleX = newtitleX.replace("kept", "")
+    hout.GetXaxis().SetTitle(newtitleX)
+    oldtitleY = hout.GetYaxis().GetTitle()
+    newtitleY = oldtitleY.replace("Kept", "")
+    newtitleY = newtitleY.replace("kept", "")
+    hout.GetYaxis().SetTitle(newtitleY)
+
     return hout
 
 
@@ -247,14 +275,15 @@ def plotRecoVsTruth1D(histKey_='TopBPhi_', tagStr_='', inputFile_=None, procList
     histNameTemp = histPrefix + 'chTTjj'
     libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Numr', _tS=tagStr_, _doFlav=False, _doBCTruth=False)
     libPlot.mergeEMhistogramsFromFile(_hOut=h2merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Denr', _tS=tagStr_, _doFlav=False, _doBCTruth=False)
-
-    histPrefixR = 'reco' + histKey_ +'_'+ lumiInTemplates + 'fb_isE_' + tagStr_ + '__'
-    histNameTemp = histPrefixR + 'chTTjj'
-    libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Numr', _tS=tagStr_ + '_Reco', _doFlav=False, _doBCTruth=False)
-    libPlot.mergeEMhistogramsFromFile(_hOut=h2merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Denr', _tS=tagStr_ + '_Reco', _doFlav=False, _doBCTruth=False)
     h2merged['tt' + 'isL' + tagStr_] = make_ttinclusive(h2merged, tagStr_, procList_)
-    h1merged['tt' + 'isL' + tagStr_ + '_Reco'] = make_ttinclusive(h1merged, tagStr_+'_Reco', procList_)
-    h2merged['tt' + 'isL' + tagStr_ + '_Reco'] = make_ttinclusive(h2merged, tagStr_ + '_Reco', procList_)
+
+    if 'DR' not in histKey_:
+        histPrefixR = 'reco' + histKey_ +'_'+ lumiInTemplates + 'fb_isE_' + tagStr_ + '__'
+        histNameTemp = histPrefixR + 'chTTjj'
+        libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Numr', _tS=tagStr_ + '_Reco', _doFlav=False, _doBCTruth=False)
+        libPlot.mergeEMhistogramsFromFile(_hOut=h2merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Denr', _tS=tagStr_ + '_Reco', _doFlav=False, _doBCTruth=False)
+        h1merged['tt' + 'isL' + tagStr_ + '_Reco'] = make_ttinclusive(h1merged, tagStr_+'_Reco', procList_)
+        h2merged['tt' + 'isL' + tagStr_ + '_Reco'] = make_ttinclusive(h2merged, tagStr_ + '_Reco', procList_)
 
     pltr.L = 1.2 * pltr.L
     pltr.R = 0.2 * pltr.R
@@ -273,18 +302,19 @@ def plotRecoVsTruth1D(histKey_='TopBPhi_', tagStr_='', inputFile_=None, procList
         h2merged[proc_ + 'isL' + tagStr_].SetLineColor(1)
         h2merged[proc_ + 'isL' + tagStr_].SetLineWidth(4)
         pltr.h1 = h2merged[proc_ + 'isL' + tagStr_]
-        h2merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetMarkerSize(1.8)
-        h2merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineColor(2)
-        h2merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineWidth(4)
-        pltr.hDrawn.append(h2merged[proc_ + 'isL' + tagStr_ + '_Reco'])
-        h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetMarkerSize(1.8)
-        h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineColor(4)
-        h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineWidth(4)
-        h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineStyle(4)
-        pltr.hDrawn.append(h1merged[proc_ + 'isL' + tagStr_ + '_Reco'])
         pltr.h1LegEntry = "gen"  # , "lp")
-        pltr.hDrawnLegEntry.append("reco")  # , "lp")
-        pltr.hDrawnLegEntry.append("Tagged reco")  # , "lp")
+        if 'DR' not in histKey_:
+            h2merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetMarkerSize(1.8)
+            h2merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineColor(2)
+            h2merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineWidth(4)
+            pltr.hDrawn.append(h2merged[proc_ + 'isL' + tagStr_ + '_Reco'])
+            h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetMarkerSize(1.8)
+            h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineColor(4)
+            h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineWidth(4)
+            h1merged[proc_ + 'isL' + tagStr_ + '_Reco'].SetLineStyle(4)
+            pltr.hDrawn.append(h1merged[proc_ + 'isL' + tagStr_ + '_Reco'])
+            pltr.hDrawnLegEntry.append("reco")  # , "lp")
+            pltr.hDrawnLegEntry.append(btagString + " reco")  # , "lp")
         pltr.saveImagePng = imageNamePrefix_ +'_' + proc_
         pltr.ratioPlotter1D()
     h1merged.clear()
@@ -365,7 +395,7 @@ def getJetFlavJson(iPlot_='KeptJetsCountInPDG', tagStr_='', inputFile_=None, pro
 
     for btagR_ in btagR_list :
         tagStrA_ = tagStr_.replace('nB'+tag[3], 'n'+btagR_)
-        print(tagStrA_)
+        # print(tagStrA_)
         histPrefix = iPlot_ +'_'+ lumiInTemplates + 'fb_isE_' + tagStrA_ + '__'
         histNameTemp = histPrefix + 'chTTjj'
         libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Numr', _tS=tagStrA_, _doFlav=False, _doBCTruth=False)
@@ -390,7 +420,7 @@ def getJetFlavJson(iPlot_='KeptJetsCountInPDG', tagStr_='', inputFile_=None, pro
         if not printImages: continue
         tagStrA_ = tagStr_.replace('nB'+tag[3], 'n'+btagR_)
         imageNamePrefixA_ = imageNamePrefix_.replace('nB'+tag[3], 'n'+btagR_)
-        print(imageNamePrefix_, 'nB'+tag[3], 'n'+btagR_)
+        # print(imageNamePrefix_, 'nB'+tag[3], 'n'+btagR_)
         for proc_ in ['tt']+procList_:
             h2merged[proc_ + 'isL' + tagStrA_].SetTitle('; Jet flavour ID; Number of Jets per Event ')
             h2merged[proc_ + 'isL' + tagStrA_].SetMarkerSize(1.8)
@@ -406,7 +436,7 @@ def getJetFlavJson(iPlot_='KeptJetsCountInPDG', tagStr_='', inputFile_=None, pro
                 h1merged[proc_ + 'isL' + tagStrA_].SetLineColor(2)
                 h1merged[proc_ + 'isL' + tagStrA_].SetLineWidth(4)
                 pltr.h1 = h1merged[proc_ + 'isL' + tagStrA_]
-                pltr.h1LegSubEntry = "b-tagged Kept Jets"
+                pltr.h1LegSubEntry = btagString + " Kept Jets"
                 pltr.saveImagePng = imageNamePrefixA_ + 'Tagged' +'_'+iPlot_+'_'+proc_
                 pltr.ratioPlotter1D()
             else:
@@ -441,7 +471,7 @@ def getProcIntegralsJson(iPlot_='KeptJetHT',tagStr_='', inputFile_=None, procLis
 
     for btagR_ in btagR_list :
         tagStrA_ = tagStr_.replace('nB'+tag[3], 'n'+btagR_)
-        print(tagStrA_)
+        # print(tagStrA_)
         histPrefix = iPlot_ +'_'+ lumiInTemplates + 'fb_isE_' + tagStrA_ + '__'
         histNameTemp = histPrefix + 'chTTjj'
         libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + '_Numr', _tS=tagStrA_, _doFlav=False, _doBCTruth=False)
@@ -476,6 +506,7 @@ def makeColourStack(hists=None, histColours=None, keyList=None, preStr='', postS
         raise KeyError('Keys in dictionaries do not match!')
     if histStack is None: histStack = rt.THStack("histStack", "")
     outHistDiction = {}
+    # print(keyList)
     for keyT in keyList:
         hists[preStr + keyT+postStr].SetMarkerColor(histColours[keyT])
         hists[preStr + keyT+postStr].SetLineColor(rt.kBlack)  # histColours[keyT]
@@ -483,14 +514,16 @@ def makeColourStack(hists=None, histColours=None, keyList=None, preStr='', postS
         hists[preStr + keyT+postStr].SetLineWidth(2)
         histStack.Add(hists[preStr + keyT+postStr])
         outHistDiction.update({keyT : hists[preStr + keyT+postStr]})
+    # print(outHistDiction.keys())
     return histStack, outHistDiction
 
 
-def plot1PadColourStack(histKey_=None, tagStr_='', inputFile_=None, procList_=None, imageNamePrefix_='defaultReco', doFlav=False, doBCTruth=False, doProcStack=False):
+def plotShapesComparison(histKey_=None, whichFlavours=None, tagStr_='', inputFile_=None, procList_=None, imageNamePrefix_='defaultReco', doFlav=False, doBCTruth=False):
     pltr.reset()
     if histKey_ is None: raise KeyError('No histogram provided')
     if procList_ is None: raise ValueError('Process list required, but none given')
     if inputFile_ is None: raise FileNotFoundError('File required, but not provided!')
+    if whichFlavours is None: whichFlavours = ['WCflav', 'Cflav']
     h1merged = {}
     pltr.L = 1.2 * pltr.L
     pltr.R = 0.2 * pltr.R
@@ -500,20 +533,74 @@ def plot1PadColourStack(histKey_=None, tagStr_='', inputFile_=None, procList_=No
     pltr.extraText = '#splitline{Work In Progress (Simulation)}{ ' + flvString + ', #geq0 t, ' + tagString + '}'
     pltr.tag = tag
     pltr.plotLowerPad = False
+    histColours = genflavColors
+    for postFix in ['_Denr', '_Numr']:
+        histPrefix = histKey_ + '_' + lumiInTemplates + 'fb_isE_' + tagStr_ + '__'
+        histNameTemp = histPrefix + 'chTTjj'
+        libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + postFix, _tS=tagStr_, _doFlav=doFlav, _doBCTruth=doBCTruth, _FlavList=whichFlavours)
+        pltr.hDrawnLegEntry=[]
+        for nfl, flavour in enumerate(whichFlavours):
+            h1merged.update({'tt' + 'isL' + tagStr_ + flavour: make_ttinclusive(histDictionary_=h1merged, addTxt_=tagStr_ + flavour, subprocList=procList_)})
+            h1merged['tt'+ 'isL' + tagStr_ + flavour].SetMarkerColor(histColours[flavour])
+            h1merged['tt'+ 'isL' + tagStr_ + flavour].SetLineColor(histColours[flavour])
+            # h1merged['tt'+ 'isL' + tagStr_ + flavour].SetFillColor(histColours[flavour])
+            h1merged['tt'+ 'isL' + tagStr_ + flavour].SetLineWidth(2)
+            h1merged['tt'+ 'isL' + tagStr_ + flavour]. Scale(1/(h1merged['tt'+ 'isL' + tagStr_ + flavour].Integral()))
+            print(h1merged['tt'+ 'isL' + tagStr_ + flavour].GetYaxis().GetTitle())
+            h1merged['tt' + 'isL' + tagStr_ + flavour].GetYaxis().SetTitle("Shapes (a.u.)")
+            if nfl==0:
+                pltr.h1 = h1merged['tt' + 'isL' + tagStr_ + flavour]
+                if postFix == '_Denr':
+                    pltr.h1LegEntry = genflavLegend[flavour]
+                elif postFix == '_Numr':
+                    pltr.h1LegEntry = btagString + ' ' + genflavLegend[flavour]
+            else:
+                pltr.hDrawn.append(h1merged['tt' + 'isL' + tagStr_ + flavour])
+                if postFix == '_Denr':
+                    pltr.hDrawnLegEntry.append(genflavLegend[flavour])
+                elif postFix == '_Numr':
+                    pltr.hDrawnLegEntry.append(btagString + ' '+genflavLegend[flavour])
+        flStrs = '_'.join([x[:-4] for x in whichFlavours])
+        pltr.saveImagePng = imageNamePrefix_ + '_' + histKey_ + '_' + 'tt_' + flStrs + '_shapeCompare' + postFix
+        pltr.ratioPlotter1D()
+
+
+def plot1PadColourStack(histKey_=None, tagStr_='', inputFile_=None, procList_=None, imageNamePrefix_='defaultReco', doFlav=False, doBCTruth=False, doProcStack=False, setlogY=False):
+    pltr.reset()
+    if histKey_ is None: raise KeyError('No histogram provided')
+    if procList_ is None: raise ValueError('Process list required, but none given')
+    if inputFile_ is None: raise FileNotFoundError('File required, but not provided!')
+    h1merged = {}
+    pltr.setlogy = setlogY
+    pltr.L = 1.2 * pltr.L
+    pltr.R = 0.2 * pltr.R
+    pltr.T = 0.9 * pltr.T
+    pltr.lumi_13TeV = str(lumi) + " fb^{-1}"
+    pltr.lumi_sqrtS = "13 TeV"
+    pltr.extraText = '#splitline{Work In Progress (Simulation)}{ ' + flvString + ', #geq0 t, ' + tagString + '}'
+    pltr.tag = tag
+    pltr.plotLowerPad = False
+    flavList=None
     if doFlav or doBCTruth or doProcStack:
-        if doFlav: flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav']
+        if doFlav:
+            if  histKey_ in ['KeptJetsDRtoAllJetsMin', 'KeptJetsPlusOtherJetInvMass','KeptJetsPlusOtherJetPT', 'KeptJetsPlusOtherJetPZ', 'KeptJetsPlusOtherJetPmag']: flavList = flvList = backup['drawDrFlavRegions']
+            else: flavList = flvList = backup['drawFlavRegions']
         elif doBCTruth: flvList =['Bin1_', 'Bin2_', 'Bin3_', 'Bin4_']
         elif doProcStack: flvList = procList_
         pltr.h1subKeyList = flvList
         pltr.h1LegSubEntry = genflavLegend.copy()
 
+    # ,'_NumrB', '_NumrC', '_NumrUDSG'
     for postFix in ['_Numr', '_Denr']:
         histPrefix = histKey_ + '_' + lumiInTemplates + 'fb_isE_' + tagStr_ + '__'
         histNameTemp = histPrefix + 'chTTjj'
-        libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + postFix, _tS=tagStr_, _doFlav=doFlav, _doBCTruth=doBCTruth)
+        libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp + postFix, _tS=tagStr_, _doFlav=doFlav, _doBCTruth=doBCTruth, _FlavList=flavList)
         h1merged['tt' + 'isL' + tagStr_] = make_ttinclusive(histDictionary_=h1merged, addTxt_=tagStr_, subprocList=procList_)
         if postFix == '_Denr': pltr.h1LegEntry = 'jets'
-        else: pltr.h1LegEntry = 'b-jets'
+        elif postFix == '_Numr': pltr.h1LegEntry = 'b-jets'
+        elif postFix == '_NumrC': pltr.h1LegEntry = 'c-jets'
+        elif postFix == '_NumrB': pltr.h1LegEntry = ' b-jets minus c'
+        elif postFix == '_NumrUDSG': pltr.h1LegEntry = 'u/d/s/g-jets'
 
         if doFlav or doBCTruth:
             for flavour in flvList: h1merged.update({'tt' + 'isL' + tagStr_ + flavour: make_ttinclusive(histDictionary_=h1merged, addTxt_=tagStr_ + flavour, subprocList=procList_)})
@@ -537,7 +624,62 @@ def plot1PadColourStack(histKey_=None, tagStr_='', inputFile_=None, procList_=No
         h1merged.clear()
 
 
-def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePrefix_='defaultMain', jsonFileName_=None, doFlav_=False):
+def plot2DPadColourStack(histKey_='KeptJetsCvsLVSCvsB', tagStr_='', inputFile_=None, procList_=None, imageNamePrefix_='defaultReco', discKey='', doFlav=False,):
+    if inputFile_ is None: raise FileNotFoundError('File required, but not provided!')
+    if procList_ is None: raise ValueError('Process list required, but none given')
+    # pltr.reset()
+    pltr.L = 1.2 * pltr.L
+    pltr.R = 0.2 * pltr.R
+    pltr.T = 0.9 * pltr.T
+    pltr.R = 0.13 * pltr.W
+    pltr.T = 0.09 * pltr.H
+    pltr.B = 0.14 * pltr.H
+    pltr.lumi_13TeV = str(lumi) + " fb^{-1}"
+    print(pltr.lumi_13TeV, lumi)
+    pltr.writeExtraText = 1
+    pltr.lumi_sqrtS = "13 TeV"
+    pltr.extraText = '            Work In Progress (Simulation)' + flvString + ' ,#geq0 t, ' + tagString
+    pltr.tag = tag
+    pltr.printRatioTxt = False
+    pltr.plotLowerPad = False
+    pltr.hDrawText = '0'
+    if doFlav:
+        if 'KeptJetsDRtoAllJetsMin' in histKey_:
+            flavList = flvList = backup['drawDrFlavRegions']
+        else:
+            flavList = flvList = backup['drawFlavRegions']
+    #,'_NumrB', '_NumrC', '_NumrUDSG','_DenrB', '_DenrC', '_DenrUDSG'
+    for postFix in ['_Numr', '_Denr']:
+        h1merged = {}
+        histPrefix = histKey_ +'_'+ lumiInTemplates + 'fb_isE_' + tagStr_ + '__'
+        histNameTemp = histPrefix + 'chTTjj'
+        # print(postFix)
+        libPlot.mergeEMhistogramsFromFile(_hOut=h1merged, _inputFiles=inputFile_, _procList=procList_, _histNameTemp=histNameTemp +postFix+ discKey, _tS=tagStr_, _doFlav=doFlav, _doBCTruth=False)
+        h1merged['tt' + 'isL' + tagStr_] = make_ttinclusive(h1merged, tagStr_, procList_)
+        for proc_ in ['tt']+ procList_:
+            h1merged[proc_ + 'isL' + tagStr].GetXaxis().SetRangeUser(0, 4)
+            h1merged[proc_ + 'isL' + tagStr].GetYaxis().SetRangeUser(0, 4)
+            h1merged[proc_ + 'isL' + tagStr].SetContour(90)
+            h1merged[proc_ + 'isL' + tagStr].SetMarkerSize(1.8)
+            pltr.h1 = h1merged[proc_ + 'isL' + tagStr]
+            pltr.saveImagePng = imageNamePrefix_ + postFix + discKey + '_' + proc_
+            pltr.ratioPlotter2D()
+        if doFlav:
+            for flavour in flvList:
+                h1merged['tt' + 'isL' + tagStr_ + flavour] = make_ttinclusive(histDictionary_=h1merged, addTxt_=tagStr_ + flavour, subprocList=procList_)
+                for proc_ in ['tt']:
+                    # + procList_
+                    h1merged[proc_ + 'isL' + tagStr+ flavour].GetXaxis().SetRangeUser(0, 4)
+                    h1merged[proc_ + 'isL' + tagStr+ flavour].GetYaxis().SetRangeUser(0, 4)
+                    h1merged[proc_ + 'isL' + tagStr+ flavour].SetContour(90)
+                    h1merged[proc_ + 'isL' + tagStr+ flavour].SetMarkerSize(1.8)
+                    pltr.h1 = h1merged[proc_ + 'isL' + tagStr+ flavour]
+                    pltr.saveImagePng = imageNamePrefix_ + postFix + discKey + '_' + proc_+'_'+flavour
+                    pltr.ratioPlotter2D()
+        h1merged.clear()
+
+
+def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePrefix_='defaultMain', jsonFileName_=None, doFlav_=False, rebinOut=False):
     systTh1_btagged = {}
     systTh1_kept = {}
     th1_btagged = {}
@@ -553,25 +695,30 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
     stackbkgHTbcut={}
     stackbkgHT2bcut={}
 
-    if doFlav_: flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav']
+    if doFlav_:
+        if iPlot_ in ['KeptJetsDRtoAllJetsMin', 'KeptJetsPlusOtherJetInvMass', 'KeptJetsPlusOtherJetPT', 'KeptJetsPlusOtherJetPZ', 'KeptJetsPlusOtherJetPmag']:
+            flavList = flvList = backup['drawDrFlavRegions']
+        else:
+            flavList = flvList = backup['drawFlavRegions']
     else: flvList = []
+    numrStr = '_Numr'
 
     histPrefix = iPlot_ + '_' + lumiInTemplates + 'fb_isE_' + tagStr_+ '__'
     # Get histograms from root file and Merge e and mu channel histograms
     histNameTemp = histPrefix+ 'chTTjj'
-    libPlot.mergeEMhistogramsFromFile(_hOut=th1_btagged, _inputFiles=inputFile_,_procList=procList_, _histNameTemp=histNameTemp+'_Numr', _tS=tagStr_, verbose=True, _doFlav=doFlav_)
-    libPlot.mergeEMhistogramsFromFile(_hOut=th1_kept, _inputFiles=inputFile_,_procList=procList_, _histNameTemp=histNameTemp+'_Denr',_tS=tagStr_, verbose=True, _doFlav=doFlav_)
+    libPlot.mergeEMhistogramsFromFile(_hOut=th1_btagged, _inputFiles=inputFile_,_procList=procList_, _histNameTemp=histNameTemp+numrStr, _tS=tagStr_, verbose=True, _doFlav=doFlav_, _FlavList=flavList)
+    libPlot.mergeEMhistogramsFromFile(_hOut=th1_kept, _inputFiles=inputFile_,_procList=procList_, _histNameTemp=histNameTemp+'_Denr',_tS=tagStr_, verbose=True, _doFlav=doFlav_, _FlavList=flavList)
     if doAllSys:
         for syst in systematicList:
             for ud in ["__plus", "__minus"]:
                 libPlot.mergeEMhistogramsFromFile(_hOut=systTh1_btagged, _inputFiles=inputFile_, _procList=procList_,
-                                                  _histNameTemp=histNameTemp + '_Numr' + '__' + syst + ud,
+                                                  _histNameTemp=histNameTemp + numrStr + '__' + syst + ud,
                                                   _tS=tagStr_ + '__' + syst + ud, _doFlav=False, _doBCTruth=False)
 
                 libPlot.mergeEMhistogramsFromFile(_hOut=systTh1_kept, _inputFiles=inputFile_, _procList=procList_,
                                                   _histNameTemp=histNameTemp + '_Denr' + '__' + syst + ud,
                                                   _tS=tagStr_ + '__' + syst + ud, _doFlav=False, _doBCTruth=False)
-    print(th1_kept.keys())
+    # print(th1_kept.keys())
     # Create TTJets(ttbb+ttother) Histograms
     ttinclus_kept = make_ttinclusive(th1_kept, tagStr_, procList_)
     ttinclus_btagged = make_ttinclusive(th1_btagged, tagStr_, procList_)
@@ -583,7 +730,19 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
     # ---------------------------------------------------------------------------------------------------------------
     inputFile_.Close()
 
-    # ttinclus_btagged, ttinclus_kept, xbinss = StatRebinHist(ttinclus_btagged, ttinclus_kept, statVal,statType, onebin=oneBinned)
+    if rebinOut:
+        statVal = 0.1
+        ttinclus_btagged, ttinclus_kept, xbinss = StatRebinHist(ttinclus_btagged, ttinclus_kept, statVal,statType, onebin=oneBinned)
+        for flavType in flvList:
+            try:
+                ttinclusFlavDictn_btagged[flavType], ttinclusFlavDictn_kept[flavType], xbinss = StatRebinHist(ttinclusFlavDictn_btagged[flavType], ttinclusFlavDictn_kept[flavType], statVal, statType, onebin=oneBinned)
+                # ttinclusFlavDictn_kept[flavType] = ttinclusFlavDictn_kept[flavType].Rebin(len(xbinss) - 1, ttinclusFlavDictn_kept[flavType].GetName() + "reb", xbinss)
+            except ReferenceError or KeyError:
+                pass
+            # try:
+            #     ttinclusFlavDictn_btagged[flavType] = ttinclusFlavDictn_btagged[flavType].Rebin(len(xbinss) - 1, ttinclusFlavDictn_btagged[flavType].GetName() + "reb", xbinss)
+            # except ReferenceError or KeyError:
+            #     pass
 
     # ---------------------------------------------------------------------------------------------------------------
     #   Make Error histograms
@@ -677,8 +836,18 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
     # ---------------------------------------------------------------------------------------------------------------
     # Only plot with Ratio of tagged over kept
     # ---------------------------------------------------------------------------------------------------------------
-    pltr.ratioFileName = jsonFileName_.replace('.json', '.txt')
-    pltr.ratioJSONfileName = jsonFileName_
+    if len(numrStr) > 5: numPostStr = '_' + numrStr[5:]
+    else: numPostStr = ''
+
+    # pltr.ratioFileName = jsonFileName_.replace('.json', '.txt')
+    # pltr.ratioJSONfileName = jsonFileName_.replace('.json', numPostStr+'.json')
+    if rebinOut:
+        pltr.ratioFileName = jsonFileName_.replace('.json', '_reb_' + iPlot_ + '.txt')
+        pltr.ratioJSONfileName = jsonFileName_.replace('.json', '_reb_' + iPlot_ + '.json')
+    else:
+        pltr.ratioFileName = jsonFileName_.replace('.json', '_' + iPlot_ + '.txt')
+        pltr.ratioJSONfileName = jsonFileName_.replace('.json', '_' + iPlot_  + '.json')
+
     pltr.L = 1.2*pltr.L
     pltr.R = 0.2*pltr.R
     pltr.T = 0.9*pltr.T
@@ -687,7 +856,7 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
     pltr.err1 = h1error
     pltr.err2 = h2error
     pltr.h2LegEntry = "jets"
-    pltr.h1LegEntry = "b-jets"
+    pltr.h1LegEntry = btagString + " jets"
     pltr.lumi_13TeV = str(lumi) + " fb^{-1}"
     pltr.writeExtraText = 1
     pltr.lumi_sqrtS = "13 TeV"
@@ -695,7 +864,7 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
     pltr.tag = tag
     pltr.pullYTitle = 'TRF^{#geq ' + tag[3][:-1] + 'b }_{b}'
     pltr.printRatioTxt = True
-    pltr.saveImagePng = imageNamePrefix_
+    pltr.saveImagePng = imageNamePrefix_+numPostStr
     pltr.ratioPlotter1D()
 
     if not doFlav_:
@@ -749,14 +918,14 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
             h2error.SetFillColor(rt.kBlue)
             h2error.SetLineColor(rt.kBlue)
 
-            pltr.ratioFileName = jsonFileName_.replace('.json', procs+'.txt')
-            pltr.ratioJSONfileName = jsonFileName_.replace('.json', procs+'.json')
+            pltr.ratioFileName = jsonFileName_.replace('.json', '_'+iPlot_ +numPostStr+'_'+procs+'.txt')
+            pltr.ratioJSONfileName = jsonFileName_.replace('.json', '_'+iPlot_ +numPostStr+'_'+procs+'.json')
             pltr.h1 = th1_btagged[procs + 'isL' + tagStr_]
             pltr.h2 = th1_kept[procs + 'isL' + tagStr_]
             pltr.err1 = h1error
             pltr.err2 = h2error
             pltr.tag = tag
-            pltr.pullYTitle = 'TRF^{#geq ' + tag[3][:-1] + 'b }_{b}'+procs
+            pltr.pullYTitle = 'TRF^{#geq ' + tag[3][:-1] + 'b }_{'+procs+'}'
             pltr.saveImagePng = imageNamePrefix_+procs
             pltr.ratioPlotter1D()
     else:
@@ -811,15 +980,20 @@ def miniMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePref
             h2error.SetFillColor(rt.kBlue)
             h2error.SetLineColor(rt.kBlue)
 
-            pltr.ratioFileName = jsonFileName_.replace('.json', flv + '_tt.txt')
-            pltr.ratioJSONfileName = jsonFileName_.replace('.json', flv + '_tt.json')
+            if rebinOut:
+                pltr.ratioFileName = jsonFileName_.replace('.json', flv + '_reb_' + iPlot_ + numPostStr + '_tt.txt')
+                pltr.ratioJSONfileName = jsonFileName_.replace('.json', flv + '_reb_' + iPlot_ + numPostStr + '_tt.json')
+            else:
+                pltr.ratioFileName = jsonFileName_.replace('.json', flv+'_'+iPlot_ +numPostStr+ '_tt.txt')
+                pltr.ratioJSONfileName = jsonFileName_.replace('.json', flv+'_'+iPlot_ +numPostStr+ '_tt.json')
             pltr.h1 = ttinclusFlavDictn_btagged[flv]
             pltr.h2 = ttinclusFlavDictn_kept[flv]
             pltr.err1 = h1error
             pltr.err2 = h2error
             pltr.tag = tag
-            pltr.pullYTitle = 'TRF^{#geq ' + tag[3][:-1] + 'b }_{b}' + procs+flv
-            pltr.saveImagePng = imageNamePrefix_ + procs+'_'+flv
+            pltr.extraText = '#splitline{Work In Progress (Simulation)}{ ' + flvString + ', #geq0 t, ' + tagString + ', '+genflavLegend[flv]+'}'
+            pltr.pullYTitle = 'TRF^{#geq ' + tag[3][:-1] + 'b }_{' + procs+'}'
+            pltr.saveImagePng = imageNamePrefix_ + procs+'_'+flv+numPostStr
             pltr.ratioPlotter1D()
 
 
@@ -839,7 +1013,11 @@ def myMain(iPlot_='', tagStr_='', inputFile_='', procList_=None, imageNamePrefix
     stackbkgHTbcut={}
     stackbkgHT2bcut={}
 
-    if doFlav_: flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav']
+    if doFlav_:
+        if 'KeptJetsDRtoAllJetsMin' in iPlot_:
+            flavList = flvList = backup['drawDrFlavRegions']
+        else:
+            flavList = flvList = backup['drawFlavRegions']
     else: flvList = []
 
     histPrefix = iPlot_ + '_' + lumiInTemplates + 'fb_isE_' + tagStr_+ '__'
@@ -1372,13 +1550,17 @@ if __name__ == '__main__':
         elif argss.getProcIntegralsJson:
             getProcIntegralsJson(iPlot_=argss.variableName, procList_=procListChoice, tagStr_=tagStr, inputFile_=inputFile, jsonFilePath_=text1DtrfDir, btagR1_=argss.btagR)
         elif argss.plot1DFlav:
-            plot1PadColourStack(histKey_=argss.variableName,tagStr_=tagStr,inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, doFlav=True)
+            plot1PadColourStack(histKey_=argss.variableName,tagStr_=tagStr,inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, doFlav=True, setlogY=argss.yLog)
+        elif argss.plot2DFlav:
+            plot2DPadColourStack(histKey_=argss.variableName,tagStr_=tagStr,inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, doFlav=argss.drawFlav)
         elif argss.plot1DHvFlav:
             plot1PadColourStack(histKey_=argss.variableName, tagStr_=tagStr, inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, doBCTruth=True)
         elif argss.plotTTJets:
             plot1PadColourStack(histKey_=argss.variableName, procList_=procListChoice, tagStr_=tagStr, inputFile_=inputFile, imageNamePrefix_=savePrefixmerged, doProcStack=True)
+        elif argss.plotShapesComp:
+            plotShapesComparison(histKey_=argss.variableName, whichFlavours=argss.flavList, procList_=procListChoice, tagStr_=tagStr, inputFile_=inputFile, imageNamePrefix_=savePrefixmerged, doFlav=True)
         elif argss.getKeptJetsPtJson:
-            miniMain(iPlot_=argss.variableName, tagStr_=tagStr, inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, jsonFileName_=ratJSONfileName, doFlav_=argss.drawFlav)
+            miniMain(iPlot_=argss.variableName, tagStr_=tagStr, inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, jsonFileName_=ratJSONfileName, doFlav_=argss.drawFlav, rebinOut=argss.rebined)
         else:
             myMain(iPlot_=argss.variableName, tagStr_=tagStr, inputFile_=inputFile, procList_=procListChoice, imageNamePrefix_=savePrefixmerged, jsonFileName_=ratJSONfileName, doFlav_=argss.drawFlav)
 

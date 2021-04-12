@@ -34,53 +34,79 @@ elif [[ "${INDIR}" == "help" ]];then
 fi
 #iPLOT=$2
 if [[ -z "${iPLOT}" ]];then
-    echo 'Default iPlot: lepPT'
-    iPLOT=lepPT
+    echo 'Using Default iPlot'
+    iPLOT_str=''
+else
+    iPLOT_str='--iPlot='${iPLOT}
 fi
 #REGION=$3
 if [[ -z "${REGION}" ]];then
-    echo 'Default region: SR'
-    REGION=SR
+    echo 'Using Default region'
+    REGION_str=''
+else
+    REGION_str='--region='${REGION}
 fi
 #isCATEGORIZED=$4
 if [[ -z "${isCATEGORIZED}" ]];then
-    echo 'Default: 0'
-    isCATEGORIZED=0
+    echo 'Not Categorised'
+    isCATEGORIZED_str=''
+else
+    isCATEGORIZED_str='--categorized'
 fi
-#isEouM=$5
-if [[ -z "${isEouM}" ]];then
-    echo 'Default: E , M'
-    isEouM='E','M'
+#isEorM=$5
+if [[ -z "${isEorM}" ]];then
+    echo 'Using Default isEM'
+    isEorM_str=''
+else
+    isEorM_str='--isEM='${isEorM}
 fi
 #nHOTT=$6
 if [[ -z "${nHOTT}" ]];then
-    echo 'Default nHOTT: 0'
-    nHOTT=0
+    echo 'Using Default nHOTT'
+    nHOTT_str=''
+else
+    nHOTT_str='--nhott='${nHOTT}
 fi
 #nTTAG=$7
 if [[ -z "${nTTAG}" ]];then
-    echo 'Default nTTAG: 0'
-    nTTAG=0
+    echo 'Using Default nTTAG'
+    nTTAG_str=''
+else
+    nTTAG_str='--nttag='${nTTAG}
 fi
 #nWTAG=$8
 if [[ -z "${nWTAG}" ]];then
-    echo 'Default nWTAG: 0'
-    nWTAG=0
+    echo 'Using Default nWTAG'
+    nWTAG_str=''
+else
+    nWTAG_str='--nWtag='${nWTAG}
 fi
 #nBTAG=$9
 if [[ -z "${nBTAG}" ]];then
-    echo 'Default nBTAG: 2'
-    nBTAG=2
+    echo 'Using Default nBTAG'
+    nBTAG_str=''
+else
+    nBTAG_str='--nbtag='${nBTAG}
 fi
 #nJETS=$10
 if [[ -z "${nJETS}" ]];then
-    echo 'Default nJETS: 4'
-    nJETS=4
+    echo 'Using Default nJETS'
+    nJETS_str=''
+else
+    nJETS_str='--njets='${nJETS}
 fi
 
 if [[ -z "${doTRUTH}" ]];then
-    echo 'Default doTRUTH: true'
+    echo 'Using doTRUTH: true'
     doTRUTH='true'
+fi
+
+# btagType
+if [[ -z "${BTAGTYPE}" ]];then
+    echo 'Default nJETS: 4'
+    BTAGTYPE_str=''
+else
+   BTAGTYPE_str='--btagType='${BTAGTYPE}
 fi
 
 if [[ -z "${doImp}" ]];then
@@ -113,12 +139,14 @@ cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJet
 
 if [[ ${YEAR} -eq 2018 ]];then
 	cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgWeights/weights18.py .
-    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/samples18.py .
+    cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgSamples/samples18.py .
 elif [[ ${YEAR} -eq 2017 ]];then
     echo "using 17 weights"
     cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgWeights/weights17.py .
     cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/pkgSamples/samples17.py .
 fi
+
+YEAR_STR='--year='${YEAR}
 
 #cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/doHists_plotList.json .
 cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/plotList.yml .
@@ -141,6 +169,12 @@ elif [[ "$REGION" == *"extractionImp"* ]];then
 #        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/1valTRF/eff_B2p.json .
 #        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/1valTRF/eff_B3p.json .
 
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixxator_removedWcX_KeptJetsPt2021_3_16_23_30/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/eff_B2p.json .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixxator_removedGcX_KeptJetsPt2021_3_17_6_40/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/eff_B2p.json .
+
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixxator_keptWcXevents_KeptJetsPt2021_3_22_19_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/eff_B2p.json .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/kinematics_extractionProdAna17_mixxator_removedWcXevents_KeptJetsPt2021_3_22_18_10/el20mu20_MET60_MT60_1jet0_2jet00TRFtablesout/eff_B2p.json .
+
 
         cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2ptt1b.json .
         cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2ptt2b.json .
@@ -152,7 +186,9 @@ elif [[ "$REGION" == *"extractionImp"* ]];then
         cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pCflav_tt.json .
         cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/IdealCaseTRFproduction/2017/J6/defTTJetsProcs/eff_B2pLiFlav_tt.json .
 
-        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem_Implement.py .
+#        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem_Implement.py .
+        cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/TTJetsTRFstudy/analyze_trueTopRem_JetLevelImplement.py analyze_trueTopRem_Implement.py
+
         echo "Using MC weights true tops "
     else
         wghtStr=""
@@ -185,10 +221,12 @@ fi
 cp /user/nistylia/newQCDstudySLanalyser/CMSSW_9_4_10/src/singleLepAnalyzer/utils.py .
 
 python -u doHists.py ${INDIR} \
-    --iPlot=${iPLOT} \
-    --region=${REGION} \
-    --nbtag=${nBTAG} \
-    --njets=${nJETS} \
+    ${YEAR_STR} \
+    ${iPLOT_str} \
+    ${REGION_str} \
+    ${nBTAG_str} \
+    ${nJETS_str} \
+    ${BTAGTYPE_str} \
     ${whatToDo}\
     ${whatToDo2}\
     -v
