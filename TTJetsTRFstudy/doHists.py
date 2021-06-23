@@ -58,6 +58,11 @@ indir_parser.add_argument('-I', '--indir18y', metavar='',
 analyzer_parser = parser.add_mutually_exclusive_group()
 analyzer_parser.add_argument('-doP','--doProduction',help='Do TRF production (given priority over -doI)', action='store_true')
 analyzer_parser.add_argument('-doI','--doImplementation',help='Do TRF implementation', action='store_true')
+
+parser.add_argument('-usept','--usePt',help='If implementing use TRF(pt)', action='store_true')
+parser.add_argument('-useeta','--useEta',help='If implementing use TRF(eta)', action='store_true')
+parser.add_argument('-usedr','--useDr',help='If implementing use TRF(DRmin)', action='store_true')
+
 argss = parser.parse_args()
 
 import os,sys,time,datetime,pickle,itertools,yaml
@@ -122,8 +127,10 @@ bkgList = [
         'TTJetsSemiLepNjet9binTT1b','TTJetsSemiLepNjet9binTT2b','TTJetsSemiLepNjet9binTTbb','TTJetsSemiLepNjet9binTTcc','TTJetsSemiLepNjet9binTTjj',
         'TTJets2L2nuTT1b','TTJets2L2nuTT2b','TTJets2L2nuTTbb','TTJets2L2nuTTcc','TTJets2L2nuTTjj',
         # 'Ts','Tt','Tbt','TtW','TbtW',
+
         # 'TTHH','TTTJ','TTTW','TTWH','TTWW','TTWZ','TTZH','TTZZ',
         # 'TTWl','TTZlM10','TTZlM1to10','TTHB','TTHnoB',#'TTWq',
+
         # 'WW','WZ','ZZ',
         # 'QCDht200','QCDht300','QCDht500','QCDht700','QCDht1000','QCDht1500','QCDht2000',
           ]
@@ -165,7 +172,8 @@ runBkgs = True
 runSigs = True
 
 cutList = {'elPtCut':20,'muPtCut':20,'metCut':60,'mtCut':60,'jet1PtCut':0,'jet2PtCut':0,'jet3PtCut':0,'AK4HTCut':510,
-           'btagType': argss.btagType, 'year': argss.year, 'lumiStr': lumiStr, 'printProdPlots': False, 'do4TSLCriteria': True}
+           'btagType': argss.btagType, 'year': argss.year, 'lumiStr': lumiStr, 'printProdPlots': False, 'do4TSLCriteria': True,
+           'usePt': argss.usePt, 'useEta': argss.useEta, 'useDr': argss.useDr}
 cutString  = 'el'+str(int(cutList['elPtCut']))+'mu'+str(int(cutList['muPtCut']))
 cutString += '_MET'+str(int(cutList['metCut']))+'_MT'+str(cutList['mtCut'])
 cutString += '_1jet'+str(int(cutList['jet1PtCut']))+'_2jet'+str(int(cutList['jet2PtCut']))+str(int(cutList['jet3PtCut']))
@@ -248,12 +256,12 @@ if __name__ == '__main__':
         datahists = {}
         outDir = mkdirPath(argss.outdir, pfix, cutString, catDir, extraMkdirOpt)
         category = {'isEM':cat[0],'nhott':cat[1],'nttag':cat[2],'nWtag':cat[3],'nbtag':cat[4],'njets':cat[5]}
-        for data in dataList:
-            tFileData[data],tTreeData[data]=readTree(step1Dir+'/'+samples[data]+'_hadd.root')
-            datahists.update(analyze(tTreeData,data,'',cutList,False,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
+        for dataKey in dataList:
+            tFileData[dataKey],tTreeData[dataKey]=readTree(step1Dir+'/'+samples[dataKey]+'_hadd.root')
+            datahists.update(analyze(tTreeData,dataKey,'',cutList,False,iPlot,plotList,category,region,isCategorized, weight, argss.verbose))
             if catInd==nCats:
-                del tFileData[data]
-                del tTreeData[data]
+                del tFileData[dataKey]
+                del tTreeData[dataKey]
         pickle.dump(datahists,open(outDir+'/datahists_'+iPlot+'.p','wb'))
         catInd+=1
 

@@ -2,74 +2,16 @@
 from __future__ import print_function, division
 
 import math
-from ROOT import TH1D, TH2D, TLorentzVector
+from ROOT import TH1D, TH2D, TH3D, TLorentzVector, TH1
 from array import array
 import sys, itertools
 import numpy as np
+from pkgTRFtools.trfTools import *
 
 '''
---This function will make kinematic plots for a given distribution for electron, muon channels and their combination
---Check the cuts below to make sure those are the desired full set of cuts!
---The applied weights are defined in 'weights.py'. Also, the additional weights (SFs, 
-negative MC weights, ets) applied below should be checked!
+--Analyse script where we extract the TRFs for Estimates
 '''
 zero = 1E-12
-
-
-def iniTH1(histDictionary=None, th1Name="", xLabel="", binArray=None):
-    """
-
-    :param histDictionary:
-    :type histDictionary: dict
-    :param th1Name:
-    :type th1Name: str
-    :param xLabel:
-    :type xLabel: str
-    :param binArray:
-    :type binArray: ArrayType
-    :return: th1 hists saved in dictionary defined in main (given as input)
-    """
-    if binArray is None:
-        err_msg = "No bin array given for histogram : " + th1Name
-        sys.exit(err_msg)
-    if histDictionary is None:
-        err_msg = "No dictionary given to save/update histogram : " + th1Name
-        sys.exit(err_msg)
-    histDictionary.update({th1Name: TH1D(th1Name, xLabel, len(binArray) - 1, binArray)})
-
-
-def iniTH2(histDictionary=None, th2Name="", xyzLabel="", xbinArray=None, ybinArray=None):
-    """
-
-    :param histDictionary:
-    :type histDictionary: dict
-    :param th2Name:
-    :type th2Name: str
-    :param xyzLabel:
-    :type xyzLabel: str
-    :param xbinArray:
-    :type xbinArray: ArrayType
-    :param ybinArray:
-    :type ybinArray: ArrayType
-    :return: th1 hists saved in dictionary defined in main (given as input)
-    """
-    if ybinArray is None:
-        err_msg = "No y-bin array given for histogram : " + th2Name
-        sys.exit(err_msg)
-    if xbinArray is None:
-        err_msg = "No x-bin array given for histogram : " + th2Name
-        sys.exit(err_msg)
-    if histDictionary is None:
-        err_msg = "No dictionary given to save/update histogram : " + th2Name
-        sys.exit(err_msg)
-    histDictionary.update({th2Name: TH2D(th2Name, xyzLabel, len(xbinArray) - 1, xbinArray, len(ybinArray) - 1, ybinArray)})
-
-
-def checkSignIsNotNegative(someValue, VarNaame=None):
-    if VarNaame is None: VarNaame='unknownVariable'
-    if (someValue/abs(someValue)) < zero:
-        err_msg = "Value is negative of "+VarNaame+" at : "+str(someValue)
-        sys.exit(err_msg)
 
 
 class SelectionCuts(object):
@@ -79,7 +21,7 @@ class SelectionCuts(object):
 
 def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category, region, isCategorized, weightYr, verbose):
     print('/////' * 5)
-    print('PROCESSING: ', process + flv)
+    print('PROCESSING:: ', process + flv)
     print('/////' * 5)
 
     if 'Data' not in process:
@@ -94,6 +36,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
     isEM  = cat.isEM
     nbtag = cat.nbtag
     njets = cat.njets
+    nhott = cat.nhott
     btag_Flav = cutChoice.btagType
     year = cutChoice.year
     lumiStr = cutChoice.lumiStr
@@ -147,7 +90,8 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         extraKey = ''
         if nbtag == '3p' and 'Kept' in kPlot: extraKey = '3p'
         xbins = array('d', plotDetails[kPlot]['xbins' + extraKey])
-        if thDim == 2: ybins = array('d', plotDetails[kPlot]['ybins' + extraKey])
+        if thDim >= 2: ybins = array('d', plotDetails[kPlot]['ybins' + extraKey])
+        if thDim == 3: zbins = array('d', plotDetails[kPlot]['zbins' + extraKey])
         for denum in denumList:
             if 'Top' in kPlot and 'Numr' in denum: continue
             histPostFixNew = histPostFix + denum
@@ -156,25 +100,29 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 for cbtruthBinN in cbTruthBins:
                     if 'Kept' not in kPlot: continue
                     if thDim == 2: iniTH2(hists, cbtruthBinN + kPlot + histPostFix2New, plotDetails[kPlot]['title'], xbins, ybins)
+                    elif thDim == 3: iniTH3(hists, cbtruthBinN + kPlot + histPostFix2New, plotDetails[kPlot]['title'], xbins, ybins, zbins)
                     else: iniTH1(hists, cbtruthBinN + kPlot + histPostFix2New, plotDetails[kPlot]['title'], xbins)
                 # ----------------------------------------------------------------------------------------------------------
-                if kPlot in ['KeptJetsDRtoAllJetsMin', 'KeptJetsPlusOtherJetInvMass', 'KeptJetsPlusOtherJetPT', 'KeptJetsPlusOtherJetPZ','KeptJetsPlusOtherJetPmag']:
-                    flvList = ['Wq_Wqflav', 'Wq_cflav','Wq_bflav','Wq_Liflav', 'gq_gqflav']
-                    # ['c_Liflav', 'Wc_cflav', 'c_bflav', 'Wc_Liflav', 'Wc_bflav',
-                    #            'Wc_Wcflav', 'c_cflav', 'Li_LiFlav', 'b_bFlav', 'b_Liflav']
-                else: flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav', 'WCflav','WLiFlav', 'WBflav']
+                # if kPlot in ['KeptJetsDRtoAllJetsMin', 'KeptJetsPlusOtherJetInvMass', 'KeptJetsPlusOtherJetPT', 'KeptJetsPlusOtherJetPZ','KeptJetsPlusOtherJetPmag']:
+                #     flvList = ['Wq_Wqflav', 'Wq_cflav','Wq_bflav','Wq_Liflav', 'gq_gqflav']
+                #     # ['c_Liflav', 'Wc_cflav', 'c_bflav', 'Wc_Liflav', 'Wc_bflav',
+                #     #            'Wc_Wcflav', 'c_cflav', 'Li_LiFlav', 'b_bFlav', 'b_Liflav']
+                # else: flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav', 'WCflav','WLiFlav', 'WBflav']
+                flvList = ['Bflav', 'topBflav', 'Cflav', 'LiFlav', 'WCflav', 'WLiFlav', 'WBflav']
                 for flavType in flvList:
                     if 'Kept' not in kPlot: continue
                     if 'Count' in kPlot: continue
                     if thDim == 2: iniTH2(hists, kPlot + histPostFix2New + flavType, plotDetails[kPlot]['title'], xbins, ybins)
+                    elif thDim == 3: iniTH3(hists, kPlot + histPostFix2New + flavType, plotDetails[kPlot]['title'], xbins, ybins, zbins)
                     else: iniTH1(hists, kPlot + histPostFix2New + flavType, plotDetails[kPlot]['title'], xbins)
                 # ----------------------------------------------------------------------------------------------------------
-                if doAllSys:
-                    for syst in systList:
-                        for ud in ['Up', 'Down']:
-                            histPostFixTemp = syst + ud + histPostFixNew2
-                            if thDim == 2: iniTH2(hists, kPlot + histPostFixTemp, plotDetails[kPlot]['title'], xbins, ybins)
-                            else: iniTH1(hists, kPlot + histPostFixTemp, plotDetails[kPlot]['title'], xbins)
+                # if doAllSys:
+                #     for syst in systList:
+                #         for ud in ['Up', 'Down']:
+                #             histPostFixTemp = syst + ud + histPostFixNew2
+                #             if thDim == 2: iniTH2(hists, kPlot + histPostFixTemp, plotDetails[kPlot]['title'], xbins, ybins)
+                #             if thDim == 3: iniTH3(hists, kPlot + histPostFixTemp, plotDetails[kPlot]['title'], xbins, ybins, zbins)
+                #             else: iniTH1(hists, kPlot + histPostFixTemp, plotDetails[kPlot]['title'], xbins)
                 # for i in range(100):
                 #     histPostFixTemp = 'pdf'+str(i) + histPostFixNew
                 #     iniTH2(hists, 'JetPtVsAbsEta' + histPostFixTemp, '; | #eta | ;Jet p_{T}; Number of jets', eta_ybins, pt_xbins)
@@ -184,7 +132,9 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 if 'Kept' in kPlot: continue
                 if thDim == 2: iniTH2(hists, kPlot + histPostFixNew, plotDetails[kPlot]['title'], xbins, ybins)
                 else: iniTH1(hists, kPlot + histPostFixNew, plotDetails[kPlot]['title'], xbins)
-    for key in hists.keys(): hists[key].Sumw2()
+    for key in hists.keys():
+        # if 'KeptJetsWeightProd' in key: hists[key].SetCanExtend(TH1.kAllAxes)
+        hists[key].Sumw2()
     # ------------------------------------------------------------------------------------------------------------------
     #                                          EVENT LOOP
     # ------------------------------------------------------------------------------------------------------------------
@@ -210,7 +160,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         L1NonPrefiringProb_CommonCalc = eventInProcTree.L1NonPrefiringProb_CommonCalc
         MCWeight_MultiLepCalc = eventInProcTree.MCWeight_MultiLepCalc
         if 'Data' not in process:
-            commonWeight = TrigSF * lepIdSF * EGammaGsfSF * isoSF * (MCWeight_MultiLepCalc / abs(MCWeight_MultiLepCalc)) * weightYr[process]
+            if MCWeight_MultiLepCalc != 0: commonWeight = TrigSF * lepIdSF * EGammaGsfSF * isoSF * (MCWeight_MultiLepCalc / abs(MCWeight_MultiLepCalc)) * weightYr[process]
             weightNum = pileupWeight * L1NonPrefiringProb_CommonCalc * commonWeight
             weightPileupUpNum = eventInProcTree.pileupWeightUp * L1NonPrefiringProb_CommonCalc * commonWeight
             weightPileupDownNum = eventInProcTree.pileupWeightDown * L1NonPrefiringProb_CommonCalc * commonWeight
@@ -250,6 +200,13 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         # --------------------------------------------------------------------------------------------------------------
         #  Define Event Cuts (i.e. remove events)
         # --------------------------------------------------------------------------------------------------------------
+        eventNHOTtag = eventInProcTree.NresolvedTops1pFake
+        if nhott != '0p':
+            if 'p' in nhott:
+                if not eventNHOTtag >= int(nhott[:-1]): continue
+            else:
+                if not eventNHOTtag == int(nhott): continue
+
         eventNBtag = getattr(eventInProcTree, cutChoice.btagType)
         if 'p' in nbtag:
             nbtagLow = int(nbtag[:-1])  # type: int
@@ -351,7 +308,8 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         Btag_LVectrDict.clear()
         jetTempDict.clear()
         doTopBRemoval=True
-        if nbtag=='0p': doTopBRemoval=False
+        doIdeal=True
+        # if nbtag=='0p': doTopBRemoval=False
         if doTopBRemoval:
             firstRecoTopB_LVec = secondRecoTopB_LVec = thirdHighBtag_LVec = 0
             if len(eventInProcTree.topbEnergy_TTbarMassCalc) != 2 and 'TTJets' in process:
@@ -359,7 +317,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 sys.exit(error_msg)
             topbdrmax = 0.15
             firstRecoTopB_Indx = secondRecoTopB_Indx = thirdHighBtag_Indx = 99
-            if 'TTJets' in process:
+            if 'TTJets' in process and doIdeal:
                 topBdrTemp = topB_dr = 99
                 for topbjetIndx in range(0, 2):
                     del topbbdrList[:]
@@ -428,14 +386,14 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                         if denum in ['Numr', 'NumrB', 'NumrC', 'NumrUDSG','DenrB', 'DenrC', 'DenrUDSG']: continue
                         hists['TopBDR' + histPostFixNew].Fill(topB_dr, weightNum)
                         hists['recoTopBPt' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Pt(), weightNum)
-                        hists['recoTopBEta' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Eta(), weightNum)
-                        hists['recoTopBPhi' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Phi(), weightNum)
+                        hists['recoTopBEta' + histPostFixNew].Fill(abs(recotopbdict[topB_dr][2].Eta()), weightNum)
+                        hists['recoTopBPhi' + histPostFixNew].Fill(abs(recotopbdict[topB_dr][2].Phi()), weightNum)
                         hists['TopBPt2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Pt(), topB_lv.Pt(), weightNum)
-                        hists['TopBEta2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Eta(), topB_lv.Eta(), weightNum)
-                        hists['TopBPhi2D' + histPostFixNew].Fill(recotopbdict[topB_dr][2].Phi(), topB_lv.Phi(), weightNum)
+                        hists['TopBEta2D' + histPostFixNew].Fill(abs(recotopbdict[topB_dr][2].Eta()), abs(topB_lv.Eta()), weightNum)
+                        hists['TopBPhi2D' + histPostFixNew].Fill(abs(recotopbdict[topB_dr][2].Phi()), abs(topB_lv.Phi()), weightNum)
                         hists['TopBPt' + histPostFixNew].Fill(topB_lv.Pt(), weightNum)
-                        hists['TopBEta' + histPostFixNew].Fill(topB_lv.Eta(), weightNum)
-                        hists['TopBPhi' + histPostFixNew].Fill(topB_lv.Phi(), weightNum)
+                        hists['TopBEta' + histPostFixNew].Fill(abs(topB_lv.Eta()), weightNum)
+                        hists['TopBPhi' + histPostFixNew].Fill(abs(topB_lv.Phi()), weightNum)
 
                 if firstRecoTopB_Indx == 99 or secondRecoTopB_Indx == 99:
                     hists['EventCount' + histPostFix + 'Denr'].Fill(1, weightNum)
@@ -471,8 +429,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                     j_disc = btagvar[jet_i] + btagvarbb[jet_i]
                     if 'JetSubCalc' in btag_Flav: j_disc = btagDeepJetvar[jet_i]
 
-                    while j_disc in bCsvDiscr:
-                        j_disc += 0.000001
+                    while j_disc in bCsvDiscr: j_disc += 0.000001
                     bCsvDiscr.append(j_disc)
                     kjet_lv = TLorentzVector()
                     kjet_lv.SetPtEtaPhiE(eventInProcTree.theJetPt_JetSubCalc_PtOrdered[jet_i],
@@ -501,6 +458,13 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                     Btag_LVectrDict.pop(max(Btag_LVectrDict))
                     if kentry == 0:
                         if verbose > 1: print('removing the 3rd bjet')
+
+                if nbtag == '2p' and thirdHighBtag_Indx != 99:
+                    error_msg = '\n [ERROR2]: Third jet removed when it shouldnt in process ' + process
+                    sys.exit(error_msg)
+                elif nbtag == '3p' and thirdHighBtag_Indx == 99:
+                    error_msg = '\n [ERROR2]: Third jet not removed when it should in process ' + process
+                    sys.exit(error_msg)
 
             if kentry < 3:
                 if verbose > 2:
@@ -572,14 +536,14 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                     if denum in ['Numr', 'NumrB', 'NumrC', 'NumrUDSG', 'DenrB', 'DenrC', 'DenrUDSG']: continue
                     hists['TopWDR' + histPostFixNew].Fill(topW_dr, weightNum)
                     hists['recoTopWPt' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Pt(), weightNum)
-                    hists['recoTopWEta' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Eta(), weightNum)
-                    hists['recoTopWPhi' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Phi(), weightNum)
+                    hists['recoTopWEta' + histPostFixNew].Fill(abs(recotopWdict[topW_dr][2].Eta()), weightNum)
+                    hists['recoTopWPhi' + histPostFixNew].Fill(abs(recotopWdict[topW_dr][2].Phi()), weightNum)
                     hists['TopWPt2D' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Pt(), topW_lv.Pt(), weightNum)
-                    hists['TopWEta2D' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Eta(), topW_lv.Eta(), weightNum)
-                    hists['TopWPhi2D' + histPostFixNew].Fill(recotopWdict[topW_dr][2].Phi(), topW_lv.Phi(), weightNum)
+                    hists['TopWEta2D' + histPostFixNew].Fill(abs(recotopWdict[topW_dr][2].Eta()), abs(topW_lv.Eta()), weightNum)
+                    hists['TopWPhi2D' + histPostFixNew].Fill(abs(recotopWdict[topW_dr][2].Phi()), abs(topW_lv.Phi()), weightNum)
                     hists['TopWPt' + histPostFixNew].Fill(topW_lv.Pt(), weightNum)
-                    hists['TopWEta' + histPostFixNew].Fill(topW_lv.Eta(), weightNum)
-                    hists['TopWPhi' + histPostFixNew].Fill(topW_lv.Phi(), weightNum)
+                    hists['TopWEta' + histPostFixNew].Fill(abs(topW_lv.Eta()), weightNum)
+                    hists['TopWPhi' + histPostFixNew].Fill(abs(topW_lv.Phi()), weightNum)
         eventHasWcX = bool(RecoTopW_c_Indx)
         # if eventHasWcX: continue
 
@@ -588,6 +552,7 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
         # --------------------------------------------------------------------------------------------------------------
         if eventNBtag < 4: histPostFixPart = histPostFix.replace('_nB' + nbtag, '_nB' + str(eventNBtag))
         else: histPostFixPart = histPostFix.replace('_nB' + nbtag, '_nB4p')
+
         c_count = bfg_count = bft_count = uds_count = unk_count = num_count = 0
         jetsAlreadyDRd = []
         minjetdrPerEventCounter = 0
@@ -650,11 +615,15 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
             jet_LastSecLVecList = []
             # oldDR=999
             for jet_SecondIndex in range(0, eventNJets):
-                if jet_SecondIndex == firstRecoTopB_Indx: continue
-                if jet_SecondIndex == secondRecoTopB_Indx: continue
-                if jet_SecondIndex == thirdHighBtag_Indx: continue
+                # if jet_SecondIndex == firstRecoTopB_Indx: continue
+                # if jet_SecondIndex == secondRecoTopB_Indx: continue
+                # if jet_SecondIndex == thirdHighBtag_Indx: continue
                 if jet_SecondIndex == jet_i: continue
-                if jet_SecondIndex in jetsAlreadyDRd: continue
+
+                #------------------Removes double count of jet pairs ---------------------------------------------------
+                # if jet_SecondIndex in jetsAlreadyDRd: continue
+                #-------------------------------------------------------------------------------------------------------
+
                 jetSec_flv = abs(eventInProcTree.theJetHFlav_JetSubCalc_PtOrdered[jet_SecondIndex])
                 if jet_SecondIndex in RecoTopW_c_Indx+RecoTopW_b_Indx+RecoTopW_lf_Indx: jetSec_flv = 24
                 # if jet_SecondIndex in RecoTopW_c_Indx:
@@ -717,15 +686,17 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 magOfPTotaslofTwoJets = abs(sumVectTwoJets.Mag())
             else:
                 if minjetdrPerEventCounter==0:
+                    print('mindr: (entry, jetid, jetflv)')
                     print(kentry, jet_i, jet_flv)
+                print('jets already drd:')
                 print(jetsAlreadyDRd)
-                # sys.exit("No fill for this jet! I want to fill!!")
-                miniKeptJetToAllJets = -99
-                jet_LastSecFlav = 99
-                invMassWorG = -99
-                magOfPTofTwoJets = -99
-                magOfPZofTwoJets=-99
-                magOfPTotaslofTwoJets=-99
+                sys.exit("No fill for this jet! I want to fill!!")
+                # miniKeptJetToAllJets = -99
+                # jet_LastSecFlav = 99
+                # invMassWorG = -99
+                # magOfPTofTwoJets = -99
+                # magOfPZofTwoJets=-99
+                # magOfPTotaslofTwoJets=-99
             jetsAlreadyDRd.append(jet_i)
 
             #  cc,ll,ww,bb,   cl,cb,cw, lc,lb,lw,  bc,bl,bw,  wc,wl,wb (10 variations)
@@ -739,128 +710,87 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
             elif jet_flav!=24 and jet_flv==5 and jet_LastSecFlav==24: DR_Str='Wq_bflav'
             elif jet_flav!=24 and jet_LastSecFlav!=24: DR_Str='gq_gqflav'
             else:
-                miniKeptJetToAllJets = -99
-                print(jet_flv, jet_flav, jet_LastSecFlav)
-                # sys.exit("Unaccepatble flavours for this DR variable. Savvy??")
+                # miniKeptJetToAllJets = -99
+                print('min jets flavours:', jet_flv, jet_flav, jet_LastSecFlav)
+                sys.exit("Unaccepatble flavours for this DR variable. Savvy??")
 
-            # if jet_flv==4 and jet_LastSecFlav<4: DR_Str='c_Liflav'
-            # elif jet_flv<4 and jet_LastSecFlav==4: DR_Str='c_Liflav'
-            # elif jet_flv==4 and jet_LastSecFlav==24: DR_Str = 'Wc_cflav'
-            # elif jet_flv==4 and jet_flav==24 and jet_LastSecFlav==4: DR_Str = 'Wc_cflav'
-            # elif jet_flv==4 and jet_LastSecFlav==5: DR_Str = 'c_bflav'
-            # elif jet_flv==5 and jet_LastSecFlav==4: DR_Str = 'c_bflav'
-            # elif jet_flav==24 and jet_flv==4 and jet_LastSecFlav<4: DR_Str='Wc_Liflav'
-            # elif jet_flv<4 and jet_LastSecFlav==24: DR_Str='Wc_Liflav'
-            # elif jet_flv==4 and jet_flav==24 and jet_LastSecFlav==5: DR_Str = 'Wc_bflav'
-            # elif jet_flv==5 and jet_LastSecFlav==24: DR_Str = 'Wc_bflav'
-            # elif jet_flv==5 and jet_LastSecFlav<4 : DR_Str = 'b_Liflav'
-            # elif jet_flv<4 and jet_LastSecFlav==5: DR_Str = 'b_Liflav'
-            # elif jet_flv==4 and jet_flav==24 and jet_LastSecFlav==24: DR_Str = 'Wc_Wcflav'
-            # elif jet_flv==4 and jet_LastSecFlav==4: DR_Str = 'c_cflav'
-            # elif jet_flv<4 and jet_LastSecFlav<4: DR_Str='Li_LiFlav'
-            # elif jet_flv==5 and jet_LastSecFlav==5: DR_Str='b_bFlav'
-            # else:
-            #     miniKeptJetToAllJets = -99
-            #     print(jet_flv, jet_flav, jet_LastSecFlav)
-            #     # sys.exit("Unaccepatble flavours for this DR variable. Savvy??")
-
+            nJets_miniKeptJetToAllJets = miniKeptJetToAllJets * eventNJets
+            plotK2fill = {'KeptJetsDRtoAllJetsMin': miniKeptJetToAllJets, 'KeptJetsNJetsDRtoAllJetsMin': nJets_miniKeptJetToAllJets,
+                          'KeptJetsPlusOtherJetInvMass': invMassWorG, 'KeptJetsPlusOtherJetPT': magOfPTofTwoJets,
+                          'KeptJetsPlusOtherJetPZ': magOfPZofTwoJets, 'KeptJetsPlusOtherJetPmag': magOfPTotaslofTwoJets,
+                          'KeptJetsPt': jet_pt, 'KeptJetsEta': jet_eta, 'KeptJetsCountInPDG': jet_flv, 'KeptJetsWeightProd': abs(weightNum)}
+            plotK2fill2D = {'KeptJetsCvsLVSCvsB': (cVSudsg_tag_disc, cVSb_tag_disc),'KeptJetsPtVsAbsEta': (jet_eta, jet_pt),'KeptJetsPtVsDr': (miniKeptJetToAllJets, jet_pt),
+                            'KeptJetsAbsEtaVsDr': (miniKeptJetToAllJets, jet_eta)}
             for denum in denumList:
                 histPostFixNew = histPostFix + denum
+                histPostFix2New = histPostFixPart + denum
                 # if denum == 'DenrC' and cTagBool and udsgTagBool: continue
                 # if denum == 'DenrUDSG' and  udsgTagBool==False: continue
                 # if denum == 'DenrB' and cTagBool==False and udsgTagBool==False: continue
-                if 'Numr' in denum:
-                    # 1 and 2 tagged
-                    if jet_LastSecBtagged==False and jet_btagged == False: continue
-                    # # 2 tagged
-                    # if jet_LastSecBtagged==False or jet_btagged == False: continue
-                    # # 1 tagged
-                    # if jet_btagged_LastSecBtagged==False and jet_btagged == False: continue
-                    # if jet_LastSecBtagged and jet_btagged: continue
+                drAddWeight = 1
+                if 'Numr' in denum and jet_btagged == False:
+                    continue
+
+                # drAddWeight = 2
+                # if 'Numr' in denum:
+                #     if jet_LastSecBtagged==False and jet_btagged == False:
+                #         # drAddWeight = 0
+                #         continue
+                #     # 1 tagged
+                #     if jet_LastSecBtagged == False and jet_btagged == True: drAddWeight = 1
+                #     if jet_LastSecBtagged == True and jet_btagged == False: drAddWeight = 1
+                #     # 2 tagged
+                #     if jet_LastSecBtagged and jet_btagged: drAddWeight = 2
 
                 # if denum == 'NumrC' and cTagBool and udsgTagBool: continue
                 # if denum == 'NumrUDSG' and  udsgTagBool==False: continue
                 # if denum == 'NumrB' and cTagBool==False and udsgTagBool==False: continue
+                DR_Str = flavStr
                 if 'Data' not in process:
-                    if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, weightNum)
-                    if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, weightNum)
-                    if not magOfPTofTwoJets == -99: hists['KeptJetsPlusOtherJetPT' + histPostFixNew].Fill(magOfPTofTwoJets, weightNum)
-                    if not magOfPZofTwoJets == -99: hists['KeptJetsPlusOtherJetPZ' + histPostFixNew].Fill(magOfPZofTwoJets, weightNum)
-                    if not magOfPTotaslofTwoJets == -99: hists['KeptJetsPlusOtherJetPmag' + histPostFixNew].Fill(magOfPTotaslofTwoJets, weightNum)
-                    if 'TTJets' in process:
-                        if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, weightNum)
-                        if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, weightNum)
-                        if not magOfPTofTwoJets == -99: hists['KeptJetsPlusOtherJetPT' + histPostFixNew + DR_Str].Fill(magOfPTofTwoJets, weightNum)
-                        if not magOfPZofTwoJets == -99: hists['KeptJetsPlusOtherJetPZ' + histPostFixNew + DR_Str].Fill(magOfPZofTwoJets, weightNum)
-                        if not magOfPTotaslofTwoJets == -99: hists['KeptJetsPlusOtherJetPmag' + histPostFixNew + DR_Str].Fill(magOfPTotaslofTwoJets, weightNum)
-                    # ------------------------------------------------------------------------------
-                    histPostFix2New = histPostFixPart + denum
-                    if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, weightNum)
-                    if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, weightNum)
-                    if not magOfPTofTwoJets == -99: hists['KeptJetsPlusOtherJetPT' + histPostFix2New].Fill(magOfPTofTwoJets, weightNum)
-                    if not magOfPZofTwoJets == -99: hists['KeptJetsPlusOtherJetPZ' + histPostFix2New].Fill(magOfPZofTwoJets, weightNum)
-                    if not magOfPTotaslofTwoJets == -99: hists['KeptJetsPlusOtherJetPmag' + histPostFix2New].Fill(magOfPTotaslofTwoJets, weightNum)
-                    if 'TTJets' in process:
-                        if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, weightNum)
-                        if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, weightNum)
-                        if not magOfPTofTwoJets == -99: hists['KeptJetsPlusOtherJetPT' + histPostFix2New + DR_Str].Fill(magOfPTofTwoJets, weightNum)
-                        if not magOfPZofTwoJets == -99: hists['KeptJetsPlusOtherJetPZ' + histPostFix2New + DR_Str].Fill(magOfPZofTwoJets, weightNum)
-                        if not magOfPTotaslofTwoJets == -99: hists['KeptJetsPlusOtherJetPmag' + histPostFix2New + DR_Str].Fill(magOfPTotaslofTwoJets, weightNum)
+                    for plotK in plotK2fill:
+                        if plotK2fill[plotK] == -99: continue
+                        weightDrNum = weightNum  # drAddWeight *
+                        hists[plotK + histPostFixNew].Fill(plotK2fill[plotK], weightDrNum)
+                        if 'TTJets' in process and plotDetails[plotK]['drawFlav']: hists[plotK + histPostFixNew + DR_Str].Fill(plotK2fill[plotK],weightDrNum)
+                        # ----------------------------------------------------------------------------------------------
+                        hists[plotK + histPostFix2New].Fill(plotK2fill[plotK], weightDrNum)
+                        if 'TTJets' in process and plotDetails[plotK]['drawFlav']: hists[plotK + histPostFix2New + DR_Str].Fill(plotK2fill[plotK],weightDrNum)
+                    # --------------------------------------------------------------------------------------------------
+                # for denum in denumList:
+                # histPostFixNew = histPostFix + denum
+                # if denum == 'DenrC' and cTagBool and udsgTagBool: continue
+                # if denum == 'DenrUDSG' and  udsgTagBool==False: continue
+                # if denum == 'DenrB' and cTagBool==False and udsgTagBool==False: continue
 
-            for denum in denumList:
-                histPostFixNew = histPostFix + denum
-                if denum == 'DenrC' and cTagBool and udsgTagBool: continue
-                if denum == 'DenrUDSG' and  udsgTagBool==False: continue
-                if denum == 'DenrB' and cTagBool==False and udsgTagBool==False: continue
+                addWeight = 1
+                if 'Numr' in denum and jet_btagged == False:
+                    continue
+                weightNumJet = weightNum * addWeight
 
-                if 'Numr' in denum and jet_btagged == False: continue
-
-                if denum == 'NumrC' and cTagBool and udsgTagBool: continue
-                if denum == 'NumrUDSG' and  udsgTagBool==False: continue
-                if denum == 'NumrB' and cTagBool==False and udsgTagBool==False: continue
+                # if 'Data' not in process:
+                #     for plotK in plotK2fill:
+                #         if plotK2fill[plotK] == -99: continue
+                #         weightNumJet = addWeight * weightNum
+                #         hists[plotK + histPostFixNew].Fill(plotK2fill[plotK], weightNumJet)
+                #         if 'TTJets' in process and plotDetails[plotK]['drawFlav']: hists[plotK + histPostFixNew + DR_Str].Fill(plotK2fill[plotK],weightNumJet)
+                #         # ----------------------------------------------------------------------------------------------
+                #         hists[plotK + histPostFix2New].Fill(plotK2fill[plotK], weightNumJet)
+                #         if 'TTJets' in process and plotDetails[plotK]['drawFlav']: hists[plotK + histPostFix2New + DR_Str].Fill(plotK2fill[plotK],weightNumJet)
+                #     # --------------------------------------------------------------------------------------------------
+                # if denum == 'NumrC' and cTagBool and udsgTagBool: continue
+                # if denum == 'NumrUDSG' and  udsgTagBool==False: continue
+                # if denum == 'NumrB' and cTagBool==False and udsgTagBool==False: continue
 
                 if denum == 'Numr': num_count += 1
                 if 'Data' not in process:
-                    hists['KeptJetsCvsLVSCvsB' + histPostFixNew].Fill(cVSudsg_tag_disc, cVSb_tag_disc, weightNum)
-                    hists['KeptJetsPt' + histPostFixNew].Fill(jet_pt, weightNum)
-                    # if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFixNew].Fill(miniKeptJetToAllJets, weightNum)
-                    # if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFixNew].Fill(invMassWorG, weightNum)
-                    hists['KeptJetsEta' + histPostFixNew].Fill(jet_eta, weightNum)
-                    hists['KeptJetsCountInPDG' + histPostFixNew].Fill(jet_flv, weightNum)
-                    hists['KeptJetsPtVsAbsEta' + histPostFixNew].Fill(jet_eta, jet_pt, weightNum)
-                    hists['KeptJetsWeightProd' + histPostFixNew].Fill(abs(weightNum))
+                    for plotK2D in plotK2fill2D:
+                        hists[plotK2D + histPostFixNew].Fill(plotK2fill2D[plotK2D][0], plotK2fill2D[plotK2D][1], weightNum)
+                        hists[plotK2D + histPostFix2New].Fill(plotK2fill2D[plotK2D][0], plotK2fill2D[plotK2D][1], weightNum)
+                    hists['KeptJetsPtVsAbsEtVsDr' + histPostFixNew].Fill(jet_eta, jet_pt, miniKeptJetToAllJets, weightNumJet)
+                    hists['KeptJetsPtVsAbsEtVsDr' + histPostFix2New].Fill(jet_eta, jet_pt, miniKeptJetToAllJets, weightNumJet)
                     if 'TTJets' in process:
-                        hists['KeptJetsCvsLVSCvsB' + histPostFixNew + flavStr].Fill(cVSudsg_tag_disc, cVSb_tag_disc, weightNum)
-                        hists['KeptJetsPt' + histPostFixNew + flavStr].Fill(jet_pt, weightNum)
-                        # if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFixNew + DR_Str].Fill(miniKeptJetToAllJets, weightNum)
-                        # if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFixNew + DR_Str].Fill(invMassWorG, weightNum)
-                        hists['KeptJetsEta' + histPostFixNew + flavStr].Fill(jet_eta, weightNum)
-                    if doAllSys:
-                        for statT in statType:
-                            hists['KeptJetsPt' + statT + histPostFixNew].Fill(jet_pt, statType[statT])
-                            hists['KeptJetsEta' + statT + histPostFixNew].Fill(jet_eta, statType[statT])
-                    # ------------------------------------------------------------------------------
-                    histPostFix2New = histPostFixPart + denum
-                    hists['KeptJetsCvsLVSCvsB' + histPostFix2New].Fill(cVSudsg_tag_disc, cVSb_tag_disc, weightNum)
-                    hists['KeptJetsPt' + histPostFix2New].Fill(jet_pt, weightNum)
-                    # if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFix2New].Fill(miniKeptJetToAllJets, weightNum)
-                    # if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFix2New].Fill(invMassWorG, weightNum)
-                    hists['KeptJetsEta' + histPostFix2New].Fill(jet_eta, weightNum)
-                    hists['KeptJetsPtVsAbsEta' + histPostFix2New].Fill(jet_eta, jet_pt, weightNum)
-                    hists['KeptJetsCountInPDG' + histPostFix2New].Fill(jet_flv, weightNum)
-                    hists['KeptJetsWeightProd' + histPostFix2New].Fill(abs(weightNum))
-                    if 'TTJets' in process:
-                        hists['KeptJetsCvsLVSCvsB' + histPostFix2New + flavStr].Fill(cVSudsg_tag_disc, cVSb_tag_disc, weightNum)
-                        hists['KeptJetsPt' + histPostFix2New + flavStr].Fill(jet_pt, weightNum)
-                        # if not miniKeptJetToAllJets == -99: hists['KeptJetsDRtoAllJetsMin' + histPostFix2New + DR_Str].Fill(miniKeptJetToAllJets, weightNum)
-                        # if not invMassWorG == -99: hists['KeptJetsPlusOtherJetInvMass' + histPostFix2New + DR_Str].Fill(invMassWorG, weightNum)
-                        hists['KeptJetsEta' + histPostFix2New + flavStr].Fill(jet_eta, weightNum)
-                    if doAllSys:
-                        for statT in statType:
-                            hists['KeptJetsPt' + statT + histPostFix2New].Fill(jet_pt, statType[statT])
-                            hists['KeptJetsEta' + statT + histPostFix2New].Fill(jet_eta, statType[statT])
-                else:
-                    hists['KeptJetsPt' + histPostFixNew].Fill(jet_pt)
+                        hists['KeptJetsCvsLVSCvsB' + histPostFixNew + flavStr].Fill(cVSudsg_tag_disc, cVSb_tag_disc, weightNumJet)
+                        hists['KeptJetsCvsLVSCvsB' + histPostFix2New + flavStr].Fill(cVSudsg_tag_disc, cVSb_tag_disc, weightNumJet)
         if 'TTJets' in process:
             if c_count == 0 and bfg_count == 0: histPreFix = 'Bin1_'
             elif c_count == 1 and bfg_count == 0: histPreFix = 'Bin2_'
@@ -882,40 +812,22 @@ def analyze(tTRee, process, flv, cutList, doAllSys, iPlot, plotDetails, category
                 elif secetaCount == 2:
                     subleadingEta = jeteta
                     break
+            plotK2fill = {'KeptJetHT': eventAK4HT, 'KeptLeadJetEta': leadeta,'KeptSubLeadJetEta': subleadingEta}
             hists['EventCount' + histPostFix + 'Denr'].Fill(2, weightNum)
             hists['JetCount2d' + histPostFix + 'Denr'].Fill(c_count, bfg_count, weightNum)
-            hists['KeptJetHT' + histPostFix + 'Denr'].Fill(eventAK4HT, weightNum)
-            hists['KeptLeadJetEta' + histPostFix + 'Denr'].Fill(leadeta, weightNum)
-            hists['KeptSubLeadJetEta' + histPostFix + 'Denr'].Fill(jeteta, weightNum)
-            hists[histPreFix + 'KeptJetHT' + histPostFix + 'Denr'].Fill(eventAK4HT, weightNum)
-            hists[histPreFix + 'KeptLeadJetEta' + histPostFix + 'Denr'].Fill(leadeta, weightNum)
-            hists[histPreFix + 'KeptSubLeadJetEta' + histPostFix + 'Denr'].Fill(subleadingEta, weightNum)
-            # hists['EventCount' + histPostFixPart + 'Denr'].Fill(1, weightNum)
-            # hists['JetCount2d' + histPostFixPart + 'Denr'].Fill(c_count, bfg_count, weightNum)
-            hists['KeptJetHT' + histPostFixPart + 'Denr'].Fill(eventAK4HT, weightNum)
-            hists['KeptLeadJetEta' + histPostFixPart + 'Denr'].Fill(leadeta, weightNum)
-            hists['KeptSubLeadJetEta' + histPostFixPart + 'Denr'].Fill(subleadingEta, weightNum)
-            hists[histPreFix + 'KeptJetHT' + histPostFixPart + 'Denr'].Fill(eventAK4HT, weightNum)
-            hists[histPreFix + 'KeptLeadJetEta' + histPostFixPart + 'Denr'].Fill(leadeta, weightNum)
-            hists[histPreFix + 'KeptSubLeadJetEta' + histPostFixPart + 'Denr'].Fill(subleadingEta, weightNum)
+            for plotK in plotK2fill:
+                hists[plotK + histPostFix + 'Denr'].Fill(plotK2fill[plotK], weightNum)
+                hists[histPreFix + plotK + histPostFix + 'Denr'].Fill(plotK2fill[plotK], weightNum)
+                hists[plotK + histPostFixPart + 'Denr'].Fill(plotK2fill[plotK], weightNum)
+                hists[histPreFix + plotK + histPostFixPart + 'Denr'].Fill(plotK2fill[plotK], weightNum)
             if num_count > 0:
                 hists['EventCount' + histPostFix + 'Numr'].Fill(2, weightNum)
                 hists['JetCount2d' + histPostFix + 'Numr'].Fill(c_count, bfg_count, weightNum)
-                hists['KeptJetHT' + histPostFix + 'Numr'].Fill(eventAK4HT, weightNum)
-                hists['KeptLeadJetEta' + histPostFix + 'Numr'].Fill(leadeta, weightNum)
-                hists['KeptSubLeadJetEta' + histPostFix + 'Numr'].Fill(subleadingEta, weightNum)
-                hists[histPreFix + 'KeptJetHT' + histPostFix + 'Numr'].Fill(eventAK4HT, weightNum)
-                hists[histPreFix + 'KeptLeadJetEta' + histPostFix + 'Numr'].Fill(leadeta, weightNum)
-                hists[histPreFix + 'KeptSubLeadJetEta' + histPostFix + 'Numr'].Fill(subleadingEta, weightNum)
-                # hists['EventCount' + histPostFixPart +'Numr'].Fill(1, weightNum)
-                # hists['JetCount2d' + histPostFixPart +'Numr'].Fill(c_count,bfg_count, weightNum)
-                hists['KeptJetHT' + histPostFixPart + 'Numr'].Fill(eventAK4HT, weightNum)
-                hists['KeptLeadJetEta' + histPostFixPart + 'Numr'].Fill(leadeta, weightNum)
-                hists['KeptSubLeadJetEta' + histPostFixPart + 'Numr'].Fill(subleadingEta, weightNum)
-                hists[histPreFix + 'KeptJetHT' + histPostFixPart + 'Numr'].Fill(eventAK4HT, weightNum)
-                hists[histPreFix + 'KeptLeadJetEta' + histPostFixPart + 'Numr'].Fill(leadeta, weightNum)
-                hists[histPreFix + 'KeptSubLeadJetEta' + histPostFixPart + 'Numr'].Fill(subleadingEta, weightNum)
-
+                for plotK in plotK2fill:
+                    hists[plotK + histPostFix + 'Numr'].Fill(plotK2fill[plotK], weightNum)
+                    hists[histPreFix + plotK + histPostFix + 'Numr'].Fill(plotK2fill[plotK], weightNum)
+                    hists[plotK + histPostFixPart + 'Numr'].Fill(plotK2fill[plotK], weightNum)
+                    hists[histPreFix + plotK + histPostFixPart + 'Numr'].Fill(plotK2fill[plotK], weightNum)
             for jet_i in range(0, eventNJets):
                 if jet_i == firstRecoTopB_Indx: continue
                 if jet_i == secondRecoTopB_Indx: continue
